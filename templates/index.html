@@ -88,6 +88,7 @@ img {
   width:100%;
   border-radius:10px;
   margin-top:10px;
+  cursor:pointer;
 }
 
 .link-btn {
@@ -104,12 +105,41 @@ img {
   color:#999;
   margin-top:20px;
 }
+
+/* TOAST */
+#toast {
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#10b981;
+  color:white;
+  padding:12px 20px;
+  border-radius:10px;
+  display:none;
+  font-weight:bold;
+}
+
+/* MODAL */
+#modal {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.8);
+  justify-content:center;
+  align-items:center;
+}
+
+#modal img {
+  max-width:90%;
+  max-height:90%;
+}
 </style>
 </head>
 
 <body>
 
-<!-- HEADER CORRETO -->
 <div class="header">
   📦 Ata Online 
   <span style="float:right">
@@ -120,28 +150,48 @@ img {
 
 <div class="container">
 
+<!-- DASHBOARD -->
 <div class="card">
-📊 Pendentes: <b>{{ pendentes }}</b>
+  📊 Total: <b>{{ total }}</b><br>
+  🟡 Pendentes: <b>{{ pendentes }}</b><br>
+  🟢 Entregues: <b>{{ entregues }}</b>
+</div>
+
+<!-- PROGRESSO -->
+<div class="card">
+  <div style="background:#eee; border-radius:10px; overflow:hidden;">
+    <div style="
+      width: {{ (entregues / total * 100) if total > 0 else 0 }}%;
+      background:#10b981;
+      padding:10px;
+      color:white;
+      text-align:center;
+      font-weight:bold;
+    ">
+      {{ (entregues / total * 100) | round(1) if total > 0 else 0 }}%
+    </div>
+  </div>
 </div>
 
 <form method="GET" class="search">
   <input name="q" placeholder="🔍 Buscar...">
 </form>
 
+<!-- FORM -->
 <div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data">
+<form method="POST" action="/add" enctype="multipart/form-data" id="form">
   <input name="destinatario" placeholder="Destinatário" required>
   <textarea name="descricao" placeholder="Descrição" required></textarea>
   <input name="responsavel" placeholder="Responsável" required>
 
   <input type="file" name="imagem" id="fileInput">
-
   <div id="preview"></div>
 
-  <button>Salvar Ata</button>
+  <button id="btn">Salvar Ata</button>
 </form>
 </div>
 
+<!-- LISTA -->
 {% for a in atas %}
 <div class="card">
 
@@ -150,12 +200,12 @@ img {
   👤 {{ a[3] }}<br>
 
   {% if a[5] %}
-    <img src="{{ a[5] }}">
+    <img src="{{ a[5] }}" onclick="openImage(this.src)">
   {% endif %}
 
   {% if a[4] == 'pendente' %}
     <div class="tag pendente">🟡 Pendente</div><br>
-    <a class="link-btn" href="/done/{{ a[0] }}">✔ Marcar como entregue</a>
+    <a class="link-btn" onclick="notify()" href="/done/{{ a[0] }}">✔ Marcar como entregue</a>
   {% else %}
     <div class="tag entregue">🟢 Entregue</div>
   {% endif %}
@@ -169,20 +219,55 @@ Ata System v1 🚀
 
 </div>
 
+<!-- TOAST -->
+<div id="toast">✅ Ata entregue!</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <img id="modalImg">
+</div>
+
 <script>
+// PREVIEW
 const input = document.getElementById("fileInput");
 const preview = document.getElementById("preview");
 
 input.addEventListener("change", function() {
   preview.innerHTML = "";
-
   const file = this.files[0];
   if (!file) return;
 
   const img = document.createElement("img");
   img.src = URL.createObjectURL(file);
-
   preview.appendChild(img);
+});
+
+// TOAST
+function notify() {
+  const toast = document.getElementById("toast");
+  toast.style.display = "block";
+  setTimeout(() => {
+    toast.style.display = "none";
+  }, 2000);
+}
+
+// MODAL IMAGE
+function openImage(src) {
+  document.getElementById("modal").style.display = "flex";
+  document.getElementById("modalImg").src = src;
+}
+
+document.getElementById("modal").onclick = () => {
+  document.getElementById("modal").style.display = "none";
+};
+
+// LOADING BOTÃO
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+
+form.addEventListener("submit", () => {
+  btn.innerText = "Salvando...";
+  btn.disabled = true;
 });
 </script>
 

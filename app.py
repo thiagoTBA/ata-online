@@ -42,7 +42,11 @@ login_tentativas = {}
 # ---------------- DATABASE ----------------
 
 def get_db():
-    return psycopg2.connect(os.getenv("DATABASE_URL"))
+    try:
+        return psycopg2.connect(os.getenv("DATABASE_URL"))
+    except Exception as e:
+        print("ERRO DB:", e)
+        raise
 
 # ---------------- GOOGLE SHEETS ----------------
 
@@ -174,7 +178,7 @@ def index():
     db = get_db()
     cursor = db.cursor()
 
-    q = request.args.get("q")
+    q = request.args.get("q", "").strip()
     user_id = session["user_id"]
 
     if q:
@@ -192,11 +196,24 @@ def index():
 
     atas = cursor.fetchall()
 
+    # 🔥 DASHBOARD
+    cursor.execute(
+        "SELECT COUNT(*) FROM atas_saida WHERE usuario_id=%s",
+        (user_id,)
+    )
+    total = cursor.fetchone()[0]
+
     cursor.execute(
         "SELECT COUNT(*) FROM atas_saida WHERE status='pendente' AND usuario_id=%s",
         (user_id,)
     )
     pendentes = cursor.fetchone()[0]
+
+    cursor.execute(
+        "SELECT COUNT(*) FROM atas_saida WHERE status='entregue' AND usuario_id=%s",
+        (user_id,)
+    )
+    entregues = cursor.fetchone()[0]
 
     cursor.close()
     db.close()
@@ -205,6 +222,8 @@ def index():
         "index.html",
         atas=atas,
         pendentes=pendentes,
+        entregues=entregues,
+        total=total,
         username=session.get("username")
     )
 
