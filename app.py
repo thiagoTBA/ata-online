@@ -7,7 +7,7 @@ import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = os.getenv("SECRET_KEY", "devkey")
 
 REGISTER_KEY = "noc123"
 
@@ -17,14 +17,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ---------------- DATABASE ----------------
 
 def get_db():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        port=5432
-    )
-
+    import os
+    import psycopg2
+    return psycopg2.connect(os.getenv("DATABASE_URL"))
 # ---------------- AUTH ----------------
 
 @app.route("/register", methods=["GET", "POST"])
@@ -53,8 +48,8 @@ def register():
                 )
                 db.commit()
                 return redirect("/login")
-            except:
-                error = "Usuário já existe"
+            except Exception as e:
+                error = "Erro ao criar usuário"
 
         cursor.close()
         db.close()
