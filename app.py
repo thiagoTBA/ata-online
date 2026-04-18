@@ -12,6 +12,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import cloudinary
 import cloudinary.uploader
 
+
+
 # ---------------- CLOUDINARY ----------------
 
 cloudinary.config(
@@ -77,6 +79,10 @@ def enviar_para_sheets(id_registro, destinatario, descricao, responsavel, imagem
         print("ERRO SHEETS:", e)
 
 # ---------------- AUTH ----------------
+
+@app.route("/version")
+def version():
+    return "VERSAO NOVA OK"
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
