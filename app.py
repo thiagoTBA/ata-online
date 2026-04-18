@@ -2,9 +2,13 @@ from flask import Flask, render_template, request, redirect, send_from_directory
 import os
 import uuid
 from datetime import datetime
+import json
 
 import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
+
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "devkey")
@@ -17,9 +21,34 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ---------------- DATABASE ----------------
 
 def get_db():
-    import os
-    import psycopg2
     return psycopg2.connect(os.getenv("DATABASE_URL"))
+
+# ---------------- GOOGLE SHEETS ----------------
+
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds_dict = json.loads(os.getenv("GOOGLE_CREDS"))
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+client = gspread.authorize(creds)
+
+sheet = client.open("ata-online").sheet1
+
+def enviar_para_sheets(id_registro, destinatario, descricao, responsavel):
+    try:
+        sheet.append_row([
+            id_registro,
+            destinatario,
+            descricao,
+            responsavel,
+            "pendente",
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ])
+    except Exception as e:
+        print("ERRO SHEETS:", e)
+
 # ---------------- AUTH ----------------
 
 @app.route("/register", methods=["GET", "POST"])
@@ -48,14 +77,13 @@ def register():
                 )
                 db.commit()
                 return redirect("/login")
-            except Exception as e:
+            except Exception:
                 error = "Erro ao criar usuário"
 
         cursor.close()
         db.close()
 
     return render_template("register.html", error=error)
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -96,12 +124,10 @@ def login():
 
     return render_template("login.html", error=error)
 
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
-
 
 # ---------------- ROTAS ----------------
 
@@ -144,7 +170,6 @@ def index():
 
     return render_template("index.html", atas=atas, pendentes=pendentes, username=username)
 
-
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
@@ -172,13 +197,17 @@ def add():
         RETURNING id
     """, (destinatario, descricao, responsavel, filename, user_id))
 
+    id_registro = cursor.fetchone()[0]
+
     db.commit()
+
+    # 🔥 ENVIA PRO SHEETS
+    enviar_para_sheets(id_registro, destinatario, descricao, responsavel)
 
     cursor.close()
     db.close()
 
     return redirect("/")
-
 
 @app.route("/done/<int:id>")
 def done(id):
@@ -199,11 +228,11 @@ def done(id):
 
     return redirect("/")
 
-
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
+# ---------------- RUN ----------------
 
 if __name__ == "__main__":
     app.run()
