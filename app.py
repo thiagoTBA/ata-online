@@ -218,11 +218,14 @@ def done(id):
     cursor = db.cursor()
 
     cursor.execute(
-        "UPDATE atas_saida SET status='entregue' WHERE id=%s",
-        (id,)
-    )
+    "UPDATE atas_saida SET status='entregue' WHERE id=%s",
+    (id,)
+)
 
     db.commit()
+
+    # 🔥 ATUALIZA NO SHEETS
+    atualizar_status_sheets(id)
     cursor.close()
     db.close()
 
@@ -231,6 +234,21 @@ def done(id):
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
+def atualizar_status_sheets(id_registro):
+    try:
+        records = sheet.get_all_values()
+
+        for i, row in enumerate(records):
+            if str(row[0]) == str(id_registro):
+                # coluna E (status) = 5
+                sheet.update_cell(i + 1, 5, "entregue")
+                break
+
+    except Exception as e:
+        print("ERRO UPDATE SHEETS:", e)
+
+
 
 # ---------------- RUN ----------------
 
