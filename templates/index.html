@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ata Online</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin:0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  background:#f2f3f5;
+}
+
+.header {
+  background:#111827;
+  color:white;
+  padding:15px;
+  font-size:18px;
+  font-weight:bold;
+  position:sticky;
+  top:0;
+}
+
+.container {
+  padding:15px;
+  max-width:600px;
+  margin:auto;
+}
+
+.card {
+  background:white;
+  padding:15px;
+  margin-bottom:12px;
+  border-radius:14px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+input, textarea {
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  font-size:14px;
+}
+
+button {
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  font-weight:bold;
+}
+
+button:hover {
+  background:#1d4ed8;
+}
+
+.search {
+  margin-bottom:10px;
+}
+
+.tag {
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:8px;
+  display:inline-block;
+  margin-top:5px;
+}
+
+.tag.pendente { 
+  background:#fff7ed; 
+  color:#f59e0b;
+}
+
+.tag.entregue { 
+  background:#ecfdf5; 
+  color:#10b981;
+}
+
+img {
+  width:100%;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+.link-btn {
+  display:inline-block;
+  margin-top:8px;
+  font-size:13px;
+  color:#2563eb;
+  text-decoration:none;
+}
+
+.footer {
+  text-align:center;
+  font-size:12px;
+  color:#999;
+  margin-top:20px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER CORRETO -->
+<div class="header">
+  📦 Ata Online 
+  <span style="float:right">
+    👤 {{ username }} | 
+    <a href="/logout" style="color:white; text-decoration:none;">Sair</a>
+  </span>
+</div>
+
+<div class="container">
+
+<div class="card">
+📊 Pendentes: <b>{{ pendentes }}</b>
+</div>
+
+<form method="GET" class="search">
+  <input name="q" placeholder="🔍 Buscar...">
+</form>
+
+<div class="card">
+<form method="POST" action="/add" enctype="multipart/form-data">
+  <input name="destinatario" placeholder="Destinatário" required>
+  <textarea name="descricao" placeholder="Descrição" required></textarea>
+  <input name="responsavel" placeholder="Responsável" required>
+
+  <input type="file" name="imagem" id="fileInput">
+
+  <div id="preview"></div>
+
+  <button>Salvar Ata</button>
+</form>
+</div>
+
+{% for a in atas %}
+<div class="card">
+
+  <b>{{ a[1] }}</b><br>
+  <small>{{ a[2] }}</small><br>
+  👤 {{ a[3] }}<br>
+
+  {% if a[6] %}
+    <img src="/uploads/{{ a[6] }}">
+  {% endif %}
+
+  {% if a[4] == 'pendente' %}
+    <div class="tag pendente">🟡 Pendente</div><br>
+    <a class="link-btn" href="/done/{{ a[0] }}">✔ Marcar como entregue</a>
+  {% else %}
+    <div class="tag entregue">🟢 Entregue</div>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+<div class="footer">
+Ata System v1 🚀
+</div>
+
+</div>
+
+<script>
+const input = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+
+input.addEventListener("change", function() {
+  preview.innerHTML = "";
+
+  const file = this.files[0];
+  if (!file) return;
+
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+
+  preview.appendChild(img);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#111827;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card {
+  background:white;
+  padding:25px;
+  border-radius:16px;
+  width:90%;
+  max-width:350px;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+input {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
+
+button {
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  background:#10b981;
+  color:white;
+  border:none;
+  border-radius:10px;
+}
+
+.error {
+  background:#fee2e2;
+  color:#991b1b;
+  padding:10px;
+  border-radius:8px;
+  margin-top:10px;
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🧾 Cadastro</h2>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST">
+    <input name="username" placeholder="Usuário" required>
+    <input name="password" type="password" placeholder="Senha" required>
+    <input name="register_key" type="password" placeholder="Código de acesso" required>
+
+    <button>Cadastrar</button>
+  </form>
+
+  <a href="/login">Voltar</a>
+</div>
+
+</body>
+</html>

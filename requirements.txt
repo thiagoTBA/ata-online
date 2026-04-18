@@ -1,0 +1,6 @@
+flask
+psycopg2-binary
+gspread
+oauth2client
+werkzeug
+gunicorn
