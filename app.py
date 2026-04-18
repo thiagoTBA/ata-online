@@ -42,13 +42,14 @@ client = gspread.authorize(creds)
 
 sheet = client.open("ata-online").sheet1
 
-def enviar_para_sheets(id_registro, destinatario, descricao, responsavel):
+def enviar_para_sheets(id_registro, destinatario, descricao, responsavel, imagem):
     try:
         sheet.append_row([
             id_registro,
             destinatario,
             descricao,
             responsavel,
+            imagem,  # ⭐ AGORA VAI A URL
             "pendente",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ])
@@ -190,31 +191,35 @@ def add():
     user_id = session["user_id"]
 
     file = request.files.get("imagem")
-    filename = ""
+    image_url = ""
 
+    # 🔥 UPLOAD CLOUDINARY
     if file and file.filename:
-        ext = file.filename.split(".")[-1]
-        filename = f"{uuid.uuid4()}.{ext}"
         result = cloudinary.uploader.upload(
             file,
             quality="auto",
             fetch_format="auto"
-    )
+        )
+        image_url = result["secure_url"]
 
-        filename = result["secure_url"]
-
+    # 🔥 SALVA NO BANCO
     cursor.execute("""
         INSERT INTO atas_saida (destinatario, descricao, responsavel, imagem, usuario_id)
         VALUES (%s, %s, %s, %s, %s)
         RETURNING id
-    """, (destinatario, descricao, responsavel, filename, user_id))
+    """, (destinatario, descricao, responsavel, image_url, user_id))
 
     id_registro = cursor.fetchone()[0]
-
     db.commit()
 
-    # 🔥 ENVIA PRO SHEETS
-    enviar_para_sheets(id_registro, destinatario, descricao, responsavel)
+    # 🔥 ENVIA PRO SHEETS (COM IMAGEM AGORA)
+    enviar_para_sheets(
+        id_registro,
+        destinatario,
+        descricao,
+        responsavel,
+        image_url
+    )
 
     cursor.close()
     db.close()
