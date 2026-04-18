@@ -14,9 +14,9 @@ import cloudinary
 import cloudinary.uploader
 
 cloudinary.config(
-    cloud_name=os.getenv("CLOUD_NAME"),
-    api_key=os.getenv("CLOUD_API_KEY"),
-    api_secret=os.getenv("CLOUD_API_SECRET")
+    CLOUD_NAME=os.getenv("CLOUD_NAME"),
+    CLOUD_API_KEY=os.getenv("CLOUD_API_KEY"),
+    CLOUD_API_SECRET=os.getenv("CLOUD_API_SECRET")
 )
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "devkey")
