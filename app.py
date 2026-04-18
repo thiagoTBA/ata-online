@@ -4,8 +4,6 @@ import uuid
 from datetime import datetime
 
 import psycopg2
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -16,21 +14,7 @@ REGISTER_KEY = "noc123"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ---------------- GOOGLE SHEETS ----------------
-
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
-
-creds = ServiceAccountCredentials.from_json_keyfile_name("creds/cred.json", scope)
-client = gspread.authorize(creds)
-sheet = client.open("ata-online").sheet1
-
-
 # ---------------- DATABASE ----------------
-
-import os
 
 def get_db():
     return psycopg2.connect(
@@ -40,39 +24,6 @@ def get_db():
         password=os.getenv("DB_PASSWORD"),
         port=5432
     )
-
-# ---------------- SHEETS ----------------
-
-def enviar_para_sheets(id_registro, destinatario, descricao, responsavel, imagem):
-    try:
-        url_imagem = ""
-        if imagem:
-            url_imagem = f"http://127.0.0.1:5000/uploads/{imagem}"
-
-        sheet.append_row([
-            id_registro,
-            destinatario,
-            descricao,
-            responsavel,
-            "pendente",
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            f'=HYPERLINK("{url_imagem}", "Ver imagem")' if url_imagem else ""
-        ])
-    except Exception as e:
-        print("ERRO SHEETS:", e)
-
-
-def atualizar_status_sheets(id_registro):
-    try:
-        records = sheet.get_all_values()
-
-        for i, row in enumerate(records):
-            if row[0] == str(id_registro):
-                sheet.update_cell(i + 1, 5, "entregue")
-                break
-    except Exception as e:
-        print("ERRO STATUS:", e)
-
 
 # ---------------- AUTH ----------------
 
@@ -226,13 +177,10 @@ def add():
         RETURNING id
     """, (destinatario, descricao, responsavel, filename, user_id))
 
-    id_registro = cursor.fetchone()[0]
-
     db.commit()
+
     cursor.close()
     db.close()
-
-    enviar_para_sheets(id_registro, destinatario, descricao, responsavel, filename)
 
     return redirect("/")
 
@@ -254,8 +202,6 @@ def done(id):
     cursor.close()
     db.close()
 
-    atualizar_status_sheets(id)
-
     return redirect("/")
 
 
@@ -265,4 +211,4 @@ def uploaded_file(filename):
 
 
 if __name__ == "__main__":
-    app.run
+    app.run()
