@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#111827">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ata Online</title>
 
@@ -269,6 +271,13 @@ form.addEventListener("submit", () => {
   btn.innerText = "Salvando...";
   btn.disabled = true;
 });
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/static/sw.js")
+    .then(() => console.log("PWA ativo"))
+    .catch(err => console.log("Erro SW:", err));
+}
 </script>
 
 </body>
