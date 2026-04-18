@@ -10,13 +10,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+import cloudinary
+import cloudinary.uploader
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("CLOUD_API_KEY"),
+    api_secret=os.getenv("CLOUD_API_SECRET")
+)
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "devkey")
 
 REGISTER_KEY = "noc123"
 
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ---------------- DATABASE ----------------
 
@@ -189,7 +195,13 @@ def add():
     if file and file.filename:
         ext = file.filename.split(".")[-1]
         filename = f"{uuid.uuid4()}.{ext}"
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        result = cloudinary.uploader.upload(
+            file,
+            quality="auto",
+            fetch_format="auto"
+    )
+
+        filename = result["secure_url"]
 
     cursor.execute("""
         INSERT INTO atas_saida (destinatario, descricao, responsavel, imagem, usuario_id)
@@ -218,8 +230,8 @@ def done(id):
     cursor = db.cursor()
 
     cursor.execute(
-    "UPDATE atas_saida SET status='entregue' WHERE id=%s",
-    (id,)
+        "UPDATE atas_saida SET status='entregue' WHERE id=%s AND usuario_id=%s",
+        (id, session["user_id"])
 )
 
     db.commit()
@@ -231,9 +243,6 @@ def done(id):
 
     return redirect("/")
 
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
 
 def atualizar_status_sheets(id_registro):
     try:
