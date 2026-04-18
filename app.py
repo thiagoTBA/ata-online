@@ -22,7 +22,7 @@ cloudinary.config(
 
 # ---------------- APP ----------------
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -338,9 +338,6 @@ def add_security_headers(response):
 # ---------------- APP ----------------
 
 
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory('static', filename)
 
 # ---------------- RUN ----------------
 
