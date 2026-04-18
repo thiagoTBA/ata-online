@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import os
 from datetime import datetime, timedelta
 import json
-
+from flask import send_from_directory
 import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -38,6 +38,7 @@ REGISTER_KEY = "noc123"
 # ---------------- LOGIN PROTECTION ----------------
 
 login_tentativas = {}
+
 
 # ---------------- DATABASE ----------------
 
@@ -333,6 +334,13 @@ def add_security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     return response
+
+# ---------------- APP ----------------
+
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 
 # ---------------- RUN ----------------
 
