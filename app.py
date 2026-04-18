@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, redirect, send_from_directory, session
+from flask import Flask, render_template, request, redirect, session
 import os
-import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 import psycopg2
@@ -13,16 +12,32 @@ from oauth2client.service_account import ServiceAccountCredentials
 import cloudinary
 import cloudinary.uploader
 
+# ---------------- CLOUDINARY ----------------
+
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
     api_key=os.getenv("CLOUD_API_KEY"),
     api_secret=os.getenv("CLOUD_API_SECRET")
 )
+
+# ---------------- APP ----------------
+
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "devkey")
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE="Lax"
+)
+
+app.secret_key = os.getenv("SECRET_KEY")  # ❗ SEM fallback fraco
+app.permanent_session_lifetime = timedelta(hours=8)
 
 REGISTER_KEY = "noc123"
 
+# ---------------- LOGIN PROTECTION ----------------
+
+login_tentativas = {}
 
 # ---------------- DATABASE ----------------
 
@@ -49,7 +64,7 @@ def enviar_para_sheets(id_registro, destinatario, descricao, responsavel, imagem
             destinatario,
             descricao,
             responsavel,
-            imagem,  # ⭐ AGORA VAI A URL
+            imagem,
             "pendente",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ])
@@ -66,7 +81,7 @@ def register():
         db = get_db()
         cursor = db.cursor()
 
-        username = request.form["username"]
+        username = request.form["username"].strip()
         password = request.form["password"]
         register_key = request.form["register_key"]
 
@@ -76,6 +91,9 @@ def register():
         elif len(password) < 4:
             error = "Senha muito curta"
 
+        elif not username:
+            error = "Usuário inválido"
+
         else:
             try:
                 cursor.execute(
@@ -84,7 +102,8 @@ def register():
                 )
                 db.commit()
                 return redirect("/login")
-            except Exception:
+            except Exception as e:
+                print("ERRO REGISTER:", e)
                 error = "Erro ao criar usuário"
 
         cursor.close()
@@ -97,6 +116,11 @@ def login():
     error = None
 
     if request.method == "POST":
+        ip = request.remote_addr
+
+        if ip in login_tentativas and login_tentativas[ip] >= 5:
+            return "Muitas tentativas. Tente novamente mais tarde."
+
         db = get_db()
         cursor = db.cursor()
 
@@ -116,13 +140,17 @@ def login():
 
         if not user:
             error = "Usuário não existe"
+            login_tentativas[ip] = login_tentativas.get(ip, 0) + 1
 
         elif not check_password_hash(user[2], password):
             error = "Senha incorreta"
+            login_tentativas[ip] = login_tentativas.get(ip, 0) + 1
 
         else:
             session["user_id"] = user[0]
             session["username"] = user[1]
+
+            login_tentativas[ip] = 0
 
             if remember:
                 session.permanent = True
@@ -173,46 +201,62 @@ def index():
     cursor.close()
     db.close()
 
-    username = session.get("username")
-
-    return render_template("index.html", atas=atas, pendentes=pendentes, username=username)
+    return render_template(
+        "index.html",
+        atas=atas,
+        pendentes=pendentes,
+        username=session.get("username")
+    )
 
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
         return redirect("/login")
 
+    destinatario = request.form["destinatario"].strip()
+    descricao = request.form["descricao"].strip()
+    responsavel = request.form["responsavel"].strip()
+
+    if not destinatario or not descricao or not responsavel:
+        return "Campos inválidos"
+
     db = get_db()
     cursor = db.cursor()
-
-    destinatario = request.form["destinatario"]
-    descricao = request.form["descricao"]
-    responsavel = request.form["responsavel"]
-    user_id = session["user_id"]
 
     file = request.files.get("imagem")
     image_url = ""
 
-    # 🔥 UPLOAD CLOUDINARY
+    # 🔐 VALIDA UPLOAD
     if file and file.filename:
-        result = cloudinary.uploader.upload(
-            file,
-            quality="auto",
-            fetch_format="auto"
-        )
-        image_url = result["secure_url"]
+        if not file.content_type.startswith("image/"):
+            return "Arquivo inválido"
 
-    # 🔥 SALVA NO BANCO
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+
+        if size > 5 * 1024 * 1024:
+            return "Imagem muito grande (máx 5MB)"
+
+        try:
+            result = cloudinary.uploader.upload(
+                file,
+                quality="auto",
+                fetch_format="auto"
+            )
+            image_url = result["secure_url"]
+        except Exception as e:
+            print("ERRO UPLOAD:", e)
+
     cursor.execute("""
         INSERT INTO atas_saida (destinatario, descricao, responsavel, imagem, usuario_id)
         VALUES (%s, %s, %s, %s, %s)
         RETURNING id
-    """, (destinatario, descricao, responsavel, image_url, user_id))
+    """, (destinatario, descricao, responsavel, image_url, session["user_id"]))
 
     id_registro = cursor.fetchone()[0]
     db.commit()
 
-    # 🔥 ENVIA PRO SHEETS (COM IMAGEM AGORA)
     enviar_para_sheets(
         id_registro,
         destinatario,
@@ -237,17 +281,18 @@ def done(id):
     cursor.execute(
         "UPDATE atas_saida SET status='entregue' WHERE id=%s AND usuario_id=%s",
         (id, session["user_id"])
-)
+    )
 
     db.commit()
 
-    # 🔥 ATUALIZA NO SHEETS
     atualizar_status_sheets(id)
+
     cursor.close()
     db.close()
 
     return redirect("/")
 
+# ---------------- SHEETS UPDATE ----------------
 
 def atualizar_status_sheets(id_registro):
     try:
@@ -255,14 +300,20 @@ def atualizar_status_sheets(id_registro):
 
         for i, row in enumerate(records):
             if str(row[0]) == str(id_registro):
-                # coluna E (status) = 5
-                sheet.update_cell(i + 1, 5, "entregue")
+                sheet.update_cell(i + 1, 6, "entregue")  # ✔ coluna correta
                 break
 
     except Exception as e:
         print("ERRO UPDATE SHEETS:", e)
 
+# ---------------- HEADERS SEGURANÇA ----------------
 
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
 
 # ---------------- RUN ----------------
 
