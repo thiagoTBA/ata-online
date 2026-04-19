@@ -192,7 +192,6 @@ def logout():
     return redirect("/login")
 
 # ---------------- INDEX ----------------
-
 @app.route("/")
 def index():
     if "user_id" not in session:
@@ -203,7 +202,8 @@ def index():
 
     q = request.args.get("q", "").strip()
 
-    if is_admin():
+    # 🔴 ADMIN (TUDO)
+    if session["role"] == "admin":
         if q:
             cur.execute("""
                 SELECT * FROM atas_saida
@@ -212,11 +212,14 @@ def index():
             """, (f"%{q}%", f"%{q}%"))
         else:
             cur.execute("SELECT * FROM atas_saida ORDER BY id DESC LIMIT 100")
-    else:
+
+    # 🟡 ADMIN UNIDADE
+    elif session["role"] == "unit_admin":
         if q:
             cur.execute("""
                 SELECT * FROM atas_saida
-                WHERE unidade_id=%s AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                WHERE unidade_id=%s
+                AND (destinatario ILIKE %s OR descricao ILIKE %s)
                 ORDER BY id DESC LIMIT 100
             """, (session["unidade_id"], f"%{q}%", f"%{q}%"))
         else:
@@ -226,27 +229,23 @@ def index():
                 ORDER BY id DESC LIMIT 100
             """, (session["unidade_id"],))
 
+    # 🔵 USER (SÓ SUAS ATAS)
+    else:
+        if q:
+            cur.execute("""
+                SELECT * FROM atas_saida
+                WHERE usuario_id=%s
+                AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                ORDER BY id DESC LIMIT 100
+            """, (session["user_id"], f"%{q}%", f"%{q}%"))
+        else:
+            cur.execute("""
+                SELECT * FROM atas_saida
+                WHERE usuario_id=%s
+                ORDER BY id DESC LIMIT 100
+            """, (session["user_id"],))
+
     atas = cur.fetchall()
-
-    cur.execute("SELECT COUNT(*) FROM atas_saida")
-    total = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM atas_saida WHERE status='pendente'")
-    pendentes = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM atas_saida WHERE status='entregue'")
-    entregues = cur.fetchone()[0]
-
-    cur.close()
-    db.close()
-
-    return render_template("index.html",
-        atas=atas,
-        pendentes=pendentes,
-        entregues=entregues,
-        total=total,
-        username=session.get("username")
-    )
 
 # ---------------- ADD ----------------
 
