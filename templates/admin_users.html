@@ -1,7 +1,91 @@
-<h2>Usuários</h2>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Usuários</title>
 
-<table style="width:100%; border-collapse:collapse;">
-<tr style="background:#eee">
+<style>
+body {
+  font-family: Arial;
+  background:#f2f3f5;
+  margin:0;
+}
+
+.container {
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+h2 {
+  margin-bottom:15px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:white;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+th, td {
+  padding:10px;
+  text-align:left;
+}
+
+th {
+  background:#111827;
+  color:white;
+}
+
+tr {
+  border-bottom:1px solid #eee;
+}
+
+select {
+  padding:6px;
+  border-radius:6px;
+}
+
+button {
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.btn-save {
+  background:#2563eb;
+  color:white;
+}
+
+.btn-delete {
+  background:#ef4444;
+  color:white;
+  margin-top:5px;
+}
+
+.badge {
+  padding:3px 6px;
+  border-radius:6px;
+  font-size:12px;
+}
+
+.admin { background:#fee2e2; color:#b91c1c; }
+.unit { background:#fef3c7; color:#b45309; }
+.user { background:#e0f2fe; color:#0369a1; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>👥 Usuários</h2>
+
+<table>
+<tr>
   <th>ID</th>
   <th>Usuário</th>
   <th>Unidade</th>
@@ -10,11 +94,22 @@
 </tr>
 
 {% for u in users %}
-<tr style="border-bottom:1px solid #ddd">
+<tr>
 
 <form method="POST">
   <td>{{ u[0] }}</td>
-  <td>{{ u[1] }}</td>
+
+  <td>
+    {{ u[1] }}<br>
+
+    {% if u[2] == 'admin' %}
+      <span class="badge admin">Admin</span>
+    {% elif u[2] == 'unit_admin' %}
+      <span class="badge unit">Admin Unidade</span>
+    {% else %}
+      <span class="badge user">User</span>
+    {% endif %}
+  </td>
 
   <td>
     <select name="unidade_id">
@@ -29,21 +124,34 @@
   <td>
     <select name="role">
       <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
-      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>Admin</option>
+
+      <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>
+        Admin Unidade
+      </option>
+
+      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>
+        Admin Sistema
+      </option>
     </select>
   </td>
 
   <td>
     <input type="hidden" name="user_id" value="{{ u[0] }}">
-    <button>Salvar</button>
+    <button class="btn-save">Salvar</button>
 </form>
 
-    <form method="POST" action="/admin/delete_user/{{ u[0] }}" 
+    <form method="POST" action="/admin/delete_user/{{ u[0] }}"
           onsubmit="return confirm('Excluir usuário?')">
-      <button style="background:#ef4444">Excluir</button>
+      <button class="btn-delete">Excluir</button>
     </form>
+
   </td>
 
 </tr>
 {% endfor %}
 </table>
+
+</div>
+
+</body>
+</html>
