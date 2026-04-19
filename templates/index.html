@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="manifest" href="/static/manifest.json">
+<link rel="manifest" href="/static/manifest.json">
 <meta name="theme-color" content="#111827">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ata Online</title>
@@ -93,14 +93,6 @@ img {
   cursor:pointer;
 }
 
-.link-btn {
-  display:inline-block;
-  margin-top:8px;
-  font-size:13px;
-  color:#2563eb;
-  text-decoration:none;
-}
-
 .footer {
   text-align:center;
   font-size:12px;
@@ -145,15 +137,29 @@ img {
 <div class="header">
   📦 Ata Online 
   <span style="float:right">
-    👤 {{ username }} | 
-    <a href="/logout" style="color:white; text-decoration:none;">Sair</a>
+    👤 {{ username }}
+
+    {% if session["role"] == "admin" %}
+      🔴 Admin
+    {% elif session["role"] == "unit_admin" %}
+      🟡 Unidade
+    {% else %}
+      🔵 User
+    {% endif %}
+
+    | <a href="/logout" style="color:white; text-decoration:none;">Sair</a>
   </span>
 
-  {% if session.get("role") == "admin" %}
+  {% if session.get("role") in ["admin", "unit_admin"] %}
   <br>
+
+  {% if session.get("role") == "admin" %}
   <a href="/admin/users" style="color:#93c5fd">👥 Usuários</a> |
   <a href="/admin/unidades" style="color:#93c5fd">🏢 Unidades</a> |
+  {% endif %}
+
   <a href="/admin/logs" style="color:#93c5fd">📜 Logs</a>
+
   {% endif %}
 </div>
 
@@ -212,7 +218,9 @@ img {
     <div class="tag pendente">🟡 Pendente</div><br>
 
     <form method="POST" action="/done/{{ a[0] }}">
-      <button onclick="notify()">✔ Marcar como entregue</button>
+      <button onclick="notify(); this.disabled=true;">
+        ✔ Marcar como entregue
+      </button>
     </form>
 
   {% else %}

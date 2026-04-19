@@ -202,7 +202,7 @@ def index():
 
     q = request.args.get("q", "").strip()
 
-    # 🔴 ADMIN (TUDO)
+    # 🔴 ADMIN → vê tudo
     if session["role"] == "admin":
         if q:
             cur.execute("""
@@ -211,9 +211,12 @@ def index():
                 ORDER BY id DESC LIMIT 100
             """, (f"%{q}%", f"%{q}%"))
         else:
-            cur.execute("SELECT * FROM atas_saida ORDER BY id DESC LIMIT 100")
+            cur.execute("""
+                SELECT * FROM atas_saida
+                ORDER BY id DESC LIMIT 100
+            """)
 
-    # 🟡 ADMIN UNIDADE
+    # 🟡 ADMIN UNIDADE → vê tudo da unidade
     elif session["role"] == "unit_admin":
         if q:
             cur.execute("""
@@ -229,7 +232,7 @@ def index():
                 ORDER BY id DESC LIMIT 100
             """, (session["unidade_id"],))
 
-    # 🔵 USER (SÓ SUAS ATAS)
+    # 🔵 USER → só suas atas
     else:
         if q:
             cur.execute("""
@@ -246,6 +249,24 @@ def index():
             """, (session["user_id"],))
 
     atas = cur.fetchall()
+
+    # 📊 métricas
+    total = len(atas)
+    pendentes = len([a for a in atas if a[4] == "pendente"])
+    entregues = len([a for a in atas if a[4] == "entregue"])
+
+    cur.close()
+    db.close()
+
+    # 🔥 RETORNO (ESSENCIAL)
+    return render_template(
+        "index.html",
+        atas=atas,
+        total=total,
+        pendentes=pendentes,
+        entregues=entregues,
+        username=session.get("username")
+    )
 
 # ---------------- ADD ----------------
 
@@ -316,16 +337,31 @@ def done(id):
     db = get_db()
     cur = db.cursor()
 
-    if is_admin():
-        cur.execute("UPDATE atas_saida SET status='entregue' WHERE id=%s", (id,))
-    else:
+    # 🔴 ADMIN SISTEMA → pode tudo
+    if session["role"] == "admin":
+        cur.execute(
+            "UPDATE atas_saida SET status='entregue' WHERE id=%s",
+            (id,)
+        )
+
+    # 🟡 ADMIN UNIDADE → só da unidade
+    elif session["role"] == "unit_admin":
         cur.execute("""
             UPDATE atas_saida
             SET status='entregue'
             WHERE id=%s AND unidade_id=%s
         """, (id, session["unidade_id"]))
 
+    # 🔵 USER → só as próprias atas
+    else:
+        cur.execute("""
+            UPDATE atas_saida
+            SET status='entregue'
+            WHERE id=%s AND usuario_id=%s
+        """, (id, session["user_id"]))
+
     db.commit()
+
     atualizar_status_sheets(id)
     log_action(session["user_id"], "DONE_ATA", f"id={id}")
 
