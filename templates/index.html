@@ -147,19 +147,18 @@ img {
       🔵 User
     {% endif %}
 
-    | <a href="/logout" style="color:white; text-decoration:none;">Sair</a>
+    | <a href="/logout" style="color:white;">Sair</a>
   </span>
 
-  {% if session.get("role") in ["admin", "unit_admin"] %}
+  {% if session["role"] == "admin" %}
   <br>
+  <a href="/admin/users">👥 Usuários</a> |
+  <a href="/admin/unidades">🏢 Unidades</a> |
+  <a href="/admin/logs">📜 Logs</a>
 
-  {% if session.get("role") == "admin" %}
-  <a href="/admin/users" style="color:#93c5fd">👥 Usuários</a> |
-  <a href="/admin/unidades" style="color:#93c5fd">🏢 Unidades</a> |
-  {% endif %}
-
-  <a href="/admin/logs" style="color:#93c5fd">📜 Logs</a>
-
+  {% elif session["role"] == "unit_admin" %}
+  <br>
+  <a href="/admin/users">👥 Usuários</a>
   {% endif %}
 </div>
 

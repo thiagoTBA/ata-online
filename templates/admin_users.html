@@ -17,10 +17,6 @@ body {
   padding:20px;
 }
 
-h2 {
-  margin-bottom:15px;
-}
-
 table {
   width:100%;
   border-collapse:collapse;
@@ -31,7 +27,6 @@ table {
 
 th, td {
   padding:10px;
-  text-align:left;
 }
 
 th {
@@ -111,16 +106,23 @@ button {
     {% endif %}
   </td>
 
+  <!-- 🔥 UNIDADE -->
   <td>
-    <select name="unidade_id">
-      {% for un in unidades %}
-        <option value="{{ un[0] }}" {% if un[0]==u[4] %}selected{% endif %}>
-          {{ un[1] }}
-        </option>
-      {% endfor %}
-    </select>
+    {% if session["role"] == "admin" %}
+      <select name="unidade_id">
+        {% for un in unidades %}
+          <option value="{{ un[0] }}" {% if un[0]==u[4] %}selected{% endif %}>
+            {{ un[1] }}
+          </option>
+        {% endfor %}
+      </select>
+    {% else %}
+      {{ u[4] }}
+      <input type="hidden" name="unidade_id" value="{{ u[4] }}">
+    {% endif %}
   </td>
 
+  <!-- 🔥 ROLE -->
   <td>
     <select name="role">
       <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
@@ -129,9 +131,11 @@ button {
         Admin Unidade
       </option>
 
+      {% if session["role"] == "admin" %}
       <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>
         Admin Sistema
       </option>
+      {% endif %}
     </select>
   </td>
 
@@ -140,10 +144,12 @@ button {
     <button class="btn-save">Salvar</button>
 </form>
 
+    {% if session["role"] == "admin" %}
     <form method="POST" action="/admin/delete_user/{{ u[0] }}"
           onsubmit="return confirm('Excluir usuário?')">
       <button class="btn-delete">Excluir</button>
     </form>
+    {% endif %}
 
   </td>
 

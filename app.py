@@ -350,14 +350,12 @@ def done(id):
     db = get_db()
     cur = db.cursor()
 
-    # 🔴 ADMIN SISTEMA → pode tudo
     if session["role"] == "admin":
         cur.execute(
             "UPDATE atas_saida SET status='entregue' WHERE id=%s",
             (id,)
         )
 
-    # 🟡 ADMIN UNIDADE → só da unidade
     elif session["role"] == "unit_admin":
         cur.execute("""
             UPDATE atas_saida
@@ -365,13 +363,15 @@ def done(id):
             WHERE id=%s AND unidade_id=%s
         """, (id, session["unidade_id"]))
 
-    # 🔵 USER → só as próprias atas
     else:
         cur.execute("""
             UPDATE atas_saida
             SET status='entregue'
             WHERE id=%s AND usuario_id=%s
         """, (id, session["user_id"]))
+
+    if cur.rowcount == 0:
+        return "Sem permissão", 403
 
     db.commit()
 
@@ -417,46 +417,84 @@ def admin_unidades():
 
 @app.route("/admin/users", methods=["GET", "POST"])
 def admin_users():
-    if not is_admin():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    role = session.get("role")
+    unidade_id = session.get("unidade_id")
+
+    if role not in ["admin", "unit_admin"]:
         return "Acesso negado", 403
 
     db = get_db()
     cur = db.cursor()
 
+    # ---------------- UPDATE ----------------
     if request.method == "POST":
-        cur.execute("""
-            UPDATE usuarios
-            SET unidade_id=%s, role=%s
-            WHERE id=%s
-        """, (
-            request.form["unidade_id"],
-            request.form["role"],
-            request.form["user_id"]
-        ))
+        user_id = request.form.get("user_id")
+        new_unidade = request.form.get("unidade_id")
+        new_role = request.form.get("role")
+
+        if new_role not in ["user", "unit_admin", "admin"]:
+            return "Role inválido", 400
+
+        # 🔴 ADMIN → pode tudo
+        if role == "admin":
+            if int(user_id) == session["user_id"] and new_role != "admin":
+                return "Você não pode remover seu próprio admin", 400
+
+            cur.execute("""
+                UPDATE usuarios
+                SET unidade_id=%s, role=%s
+                WHERE id=%s
+            """, (new_unidade, new_role, user_id))
+
+        # 🟡 UNIT_ADMIN → limitado
+        else:
+            if new_role == "admin":
+                return "Sem permissão", 403
+
+            cur.execute("""
+                UPDATE usuarios
+                SET role=%s
+                WHERE id=%s AND unidade_id=%s
+            """, (new_role, user_id, unidade_id))
+
         db.commit()
 
-    cur.execute("""
-        SELECT u.id, u.username, u.role, un.nome, un.id
-        FROM usuarios u
-        LEFT JOIN unidades un ON u.unidade_id = un.id
-        ORDER BY u.id
-    """)
+    # ---------------- LISTAGEM ----------------
+    if role == "admin":
+        cur.execute("""
+            SELECT id, username, role, created_at, unidade_id
+            FROM usuarios
+            ORDER BY id
+        """)
+    else:
+        cur.execute("""
+            SELECT id, username, role, created_at, unidade_id
+            FROM usuarios
+            WHERE unidade_id=%s
+            ORDER BY id
+        """, (unidade_id,))
+
     users = cur.fetchall()
 
-    cur.execute("SELECT id, nome FROM unidades")
+    cur.execute("SELECT id, nome FROM unidades ORDER BY nome")
     unidades = cur.fetchall()
 
     cur.close()
     db.close()
 
     return render_template("admin_users.html", users=users, unidades=unidades)
-
 # ---------------- DELETE USER ----------------
 
 @app.route("/admin/delete_user/<int:id>", methods=["POST"])
 def delete_user(id):
     if not is_admin():
         return "Acesso negado", 403
+
+    if id == session["user_id"]:
+        return "Você não pode se deletar", 400
 
     db = get_db()
     cur = db.cursor()
