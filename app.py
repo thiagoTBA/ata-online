@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import json
 import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask import send_from_directory
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -423,6 +423,10 @@ def delete_user(id):
 
     return redirect("/admin/users")
 
+#-----------------uplodad -----------
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory('uploads', filename)
 # ---------------- LOGS ----------------
 
 @app.route("/admin/logs")

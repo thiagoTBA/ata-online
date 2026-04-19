@@ -1,0 +1,20 @@
+<h2>🏢 Unidades</h2>
+
+<form method="POST">
+  <input name="nome" placeholder="Nova unidade" required>
+  <button>Adicionar</button>
+</form>
+
+<table style="width:100%; margin-top:20px; border-collapse:collapse;">
+<tr style="background:#eee">
+  <th>ID</th>
+  <th>Nome</th>
+</tr>
+
+{% for u in unidades %}
+<tr style="border-bottom:1px solid #ddd">
+  <td>{{ u[0] }}</td>
+  <td>{{ u[1] }}</td>
+</tr>
+{% endfor %}
+</table>

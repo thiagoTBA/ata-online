@@ -1,0 +1,19 @@
+<h2>📜 Logs do Sistema</h2>
+
+<table style="width:100%; border-collapse:collapse;">
+<tr style="background:#eee">
+  <th>ID</th>
+  <th>Usuário</th>
+  <th>Ação</th>
+  <th>Data</th>
+</tr>
+
+{% for l in logs %}
+<tr style="border-bottom:1px solid #ddd">
+  <td>{{ l[0] }}</td>
+  <td>{{ l[1] }}</td>
+  <td>{{ l[2] }}</td>
+  <td>{{ l[3] }}</td>
+</tr>
+{% endfor %}
+</table>
