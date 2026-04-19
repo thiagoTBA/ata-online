@@ -148,18 +148,23 @@ img {
     👤 {{ username }} | 
     <a href="/logout" style="color:white; text-decoration:none;">Sair</a>
   </span>
+
+  {% if session.get("role") == "admin" %}
+  <br>
+  <a href="/admin/users" style="color:#93c5fd">👥 Usuários</a> |
+  <a href="/admin/unidades" style="color:#93c5fd">🏢 Unidades</a> |
+  <a href="/admin/logs" style="color:#93c5fd">📜 Logs</a>
+  {% endif %}
 </div>
 
 <div class="container">
 
-<!-- DASHBOARD -->
 <div class="card">
   📊 Total: <b>{{ total }}</b><br>
   🟡 Pendentes: <b>{{ pendentes }}</b><br>
   🟢 Entregues: <b>{{ entregues }}</b>
 </div>
 
-<!-- PROGRESSO -->
 <div class="card">
   <div style="background:#eee; border-radius:10px; overflow:hidden;">
     <div style="
@@ -176,12 +181,11 @@ img {
 </div>
 
 <form method="GET" class="search">
-  <input name="q" placeholder="🔍 Buscar...">
+  <input name="q" value="{{ request.args.get('q','') }}" placeholder="🔍 Buscar...">
 </form>
 
-<!-- FORM -->
 <div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data" id="form">
+<form method="POST" action="/add" enctype="multipart/form-data" id="form" autocomplete="off">
   <input name="destinatario" placeholder="Destinatário" required>
   <textarea name="descricao" placeholder="Descrição" required></textarea>
   <input name="responsavel" placeholder="Responsável" required>
@@ -189,11 +193,10 @@ img {
   <input type="file" name="imagem" id="fileInput">
   <div id="preview"></div>
 
-  <button id="btn">Salvar Ata</button>
+  <button type="submit" id="btn">Salvar Ata</button>
 </form>
 </div>
 
-<!-- LISTA -->
 {% for a in atas %}
 <div class="card">
 
@@ -207,7 +210,11 @@ img {
 
   {% if a[4] == 'pendente' %}
     <div class="tag pendente">🟡 Pendente</div><br>
-    <a class="link-btn" onclick="notify()" href="/done/{{ a[0] }}">✔ Marcar como entregue</a>
+
+    <form method="POST" action="/done/{{ a[0] }}">
+      <button onclick="notify()">✔ Marcar como entregue</button>
+    </form>
+
   {% else %}
     <div class="tag entregue">🟢 Entregue</div>
   {% endif %}
@@ -221,16 +228,13 @@ Ata System v1 🚀
 
 </div>
 
-<!-- TOAST -->
 <div id="toast">✅ Ata entregue!</div>
 
-<!-- MODAL -->
 <div id="modal">
   <img id="modalImg">
 </div>
 
 <script>
-// PREVIEW
 const input = document.getElementById("fileInput");
 const preview = document.getElementById("preview");
 
@@ -244,16 +248,12 @@ input.addEventListener("change", function() {
   preview.appendChild(img);
 });
 
-// TOAST
 function notify() {
   const toast = document.getElementById("toast");
   toast.style.display = "block";
-  setTimeout(() => {
-    toast.style.display = "none";
-  }, 2000);
+  setTimeout(() => toast.style.display = "none", 2000);
 }
 
-// MODAL IMAGE
 function openImage(src) {
   document.getElementById("modal").style.display = "flex";
   document.getElementById("modalImg").src = src;
@@ -263,7 +263,6 @@ document.getElementById("modal").onclick = () => {
   document.getElementById("modal").style.display = "none";
 };
 
-// LOADING BOTÃO
 const form = document.getElementById("form");
 const btn = document.getElementById("btn");
 
@@ -271,12 +270,9 @@ form.addEventListener("submit", () => {
   btn.innerText = "Salvando...";
   btn.disabled = true;
 });
-</script>
-<script>
+
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/sw.js")
-    .then(() => console.log("PWA ativo"))
-    .catch(err => console.log("Erro SW:", err));
+  navigator.serviceWorker.register("/static/sw.js");
 }
 </script>
 

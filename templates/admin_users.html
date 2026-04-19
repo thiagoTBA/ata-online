@@ -1,0 +1,49 @@
+<h2>Usuários</h2>
+
+<table style="width:100%; border-collapse:collapse;">
+<tr style="background:#eee">
+  <th>ID</th>
+  <th>Usuário</th>
+  <th>Unidade</th>
+  <th>Role</th>
+  <th>Ações</th>
+</tr>
+
+{% for u in users %}
+<tr style="border-bottom:1px solid #ddd">
+
+<form method="POST">
+  <td>{{ u[0] }}</td>
+  <td>{{ u[1] }}</td>
+
+  <td>
+    <select name="unidade_id">
+      {% for un in unidades %}
+        <option value="{{ un[0] }}" {% if un[0]==u[4] %}selected{% endif %}>
+          {{ un[1] }}
+        </option>
+      {% endfor %}
+    </select>
+  </td>
+
+  <td>
+    <select name="role">
+      <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
+      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>Admin</option>
+    </select>
+  </td>
+
+  <td>
+    <input type="hidden" name="user_id" value="{{ u[0] }}">
+    <button>Salvar</button>
+</form>
+
+    <form method="POST" action="/admin/delete_user/{{ u[0] }}" 
+          onsubmit="return confirm('Excluir usuário?')">
+      <button style="background:#ef4444">Excluir</button>
+    </form>
+  </td>
+
+</tr>
+{% endfor %}
+</table>
