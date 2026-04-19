@@ -197,68 +197,81 @@ def index():
     if "user_id" not in session:
         return redirect("/login")
 
+    role = session.get("role")
+    unidade_id = session.get("unidade_id")
+    user_id = session.get("user_id")
+
+    if not role:
+        return redirect("/logout")
+
     db = get_db()
     cur = db.cursor()
 
     q = request.args.get("q", "").strip()
 
-    # 🔴 ADMIN → vê tudo
-    if session["role"] == "admin":
-        if q:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                WHERE destinatario ILIKE %s OR descricao ILIKE %s
-                ORDER BY id DESC LIMIT 100
-            """, (f"%{q}%", f"%{q}%"))
-        else:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                ORDER BY id DESC LIMIT 100
-            """)
+    try:
+        # 🔴 ADMIN
+        if role == "admin":
+            if q:
+                cur.execute("""
+                    SELECT * FROM atas_saida
+                    WHERE destinatario ILIKE %s OR descricao ILIKE %s
+                    ORDER BY id DESC LIMIT 100
+                """, (f"%{q}%", f"%{q}%"))
+            else:
+                cur.execute("SELECT * FROM atas_saida ORDER BY id DESC LIMIT 100")
 
-    # 🟡 ADMIN UNIDADE → vê tudo da unidade
-    elif session["role"] == "unit_admin":
-        if q:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                WHERE unidade_id=%s
-                AND (destinatario ILIKE %s OR descricao ILIKE %s)
-                ORDER BY id DESC LIMIT 100
-            """, (session["unidade_id"], f"%{q}%", f"%{q}%"))
-        else:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                WHERE unidade_id=%s
-                ORDER BY id DESC LIMIT 100
-            """, (session["unidade_id"],))
+        # 🟡 ADMIN UNIDADE
+        elif role == "unit_admin":
+            if q:
+                cur.execute("""
+                    SELECT * FROM atas_saida
+                    WHERE unidade_id=%s
+                    AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                    ORDER BY id DESC LIMIT 100
+                """, (unidade_id, f"%{q}%", f"%{q}%"))
+            else:
+                cur.execute("""
+                    SELECT * FROM atas_saida
+                    WHERE unidade_id=%s
+                    ORDER BY id DESC LIMIT 100
+                """, (unidade_id,))
 
-    # 🔵 USER → só suas atas
-    else:
-        if q:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                WHERE usuario_id=%s
-                AND (destinatario ILIKE %s OR descricao ILIKE %s)
-                ORDER BY id DESC LIMIT 100
-            """, (session["user_id"], f"%{q}%", f"%{q}%"))
-        else:
-            cur.execute("""
-                SELECT * FROM atas_saida
-                WHERE usuario_id=%s
-                ORDER BY id DESC LIMIT 100
-            """, (session["user_id"],))
+        # 🔵 USER
+        elif role == "user":
+            if q:
+                cur.execute("""
+                    SELECT * FROM atas_saida
+                    WHERE usuario_id=%s
+                    AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                    ORDER BY id DESC LIMIT 100
+                """, (user_id, f"%{q}%", f"%{q}%"))
+            else:
+                cur.execute("""
+                    SELECT * FROM atas_saida
+                    WHERE usuario_id=%s
+                    ORDER BY id DESC LIMIT 100
+                """, (user_id,))
 
-    atas = cur.fetchall()
+        # 🚨 QUALQUER COISA FORA DISSO
+        else:
+            return redirect("/logout")
+
+        atas = cur.fetchall()
+
+    except Exception as e:
+        print("ERRO INDEX:", e)
+        return "Erro interno", 500
+
+    finally:
+        cur.close()
+        db.close()
 
     # 📊 métricas
     total = len(atas)
     pendentes = len([a for a in atas if a[4] == "pendente"])
     entregues = len([a for a in atas if a[4] == "entregue"])
 
-    cur.close()
-    db.close()
-
-    # 🔥 RETORNO (ESSENCIAL)
     return render_template(
         "index.html",
         atas=atas,
