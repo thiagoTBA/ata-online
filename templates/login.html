@@ -6,7 +6,7 @@
 body {
   margin:0;
   font-family: system-ui;
-  background:#111827;
+  background: linear-gradient(135deg, #020617, #1e293b, #2563eb);
   display:flex;
   justify-content:center;
   align-items:center;
@@ -20,6 +20,7 @@ body {
   width:90%;
   max-width:350px;
   animation: fadeIn 0.4s ease;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
 }
 
 @keyframes fadeIn {
@@ -33,6 +34,12 @@ input {
   margin-top:10px;
   border-radius:10px;
   border:1px solid #ddd;
+  outline:none;
+}
+
+input:focus {
+  border-color:#2563eb;
+  box-shadow:0 0 0 2px rgba(37,99,235,0.2);
 }
 
 button {
@@ -57,7 +64,8 @@ button {
 .toggle {
   position:absolute;
   right:15px;
-  top:42px;
+  top:50%;
+  transform: translateY(-50%);
   cursor:pointer;
 }
 </style>
@@ -76,13 +84,13 @@ button {
     <input name="username" placeholder="Usuário" required>
 
     <div style="position:relative;">
-      <input id="password" name="password" type="password" placeholder="Senha" required>
+      <input id="password" name="password" type="password" placeholder="Senha" required style="padding-right:40px;">
       <span class="toggle" onclick="togglePassword()">👁️</span>
     </div>
 
-    <label style="font-size:13px;">
-      <input type="checkbox" name="remember"> Lembrar de mim
-    </label>
+    <label style="font-size:13px; display:flex; align-items:center; gap:6px; margin-top:10px;">
+  <input type="checkbox" name="remember"> Lembrar de mim
+  </label>
 
     <button>Entrar</button>
   </form>
