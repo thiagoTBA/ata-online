@@ -322,7 +322,7 @@ def atender(id):
         return redirect("/login")
 
     # 🔒 PERMISSÃO
-    if session.get("role") not in ["admin", "unit_admin", "secretaria"]:
+    if session.get("role") not in ["admin", "secretaria"]:
         return "Sem permissão", 403
 
     db = get_db()

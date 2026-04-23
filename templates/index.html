@@ -187,7 +187,7 @@ button {
   {% endif %}
 
   <!-- SECRETARIA -->
-  {% if session["role"] in ["admin","unit_admin","secretaria"] and not a["atendente"] %}
+  {% if session["role"] in ["admin","secretaria"] and not a["atendente"] %}
     <form method="POST" action="/atender/{{ a["id"] }}">
       <button>Atender</button>
     </form>
