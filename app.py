@@ -232,7 +232,7 @@ def index():
 
     for a in atas:
         a = list(a)
-        numero = a[9]
+        numero = a[0]
 
         if numero:
             protocolo = formatar_protocolo(numero)
@@ -332,6 +332,10 @@ def atender(id):
     if "user_id" not in session:
         return redirect("/login")
 
+    # 🔒 PERMISSÃO
+    if session.get("role") not in ["admin", "unit_admin", "secretaria"]:
+        return "Sem permissão", 403
+
     db = get_db()
     cur = db.cursor()
 
@@ -339,7 +343,8 @@ def atender(id):
         UPDATE atas_saida
         SET
           atendente=%s,
-          data_atendimento=NOW()
+          data_atendimento=NOW(),
+          status='EM_ATENDIMENTO'
         WHERE id=%s
     """, (
         session["username"],
@@ -357,8 +362,12 @@ def parecer(id):
     if "user_id" not in session:
         return redirect("/login")
 
+    # 🔒 PERMISSÃO
+    if session.get("role") not in ["admin", "coordenacao"]:
+        return "Sem permissão", 403
+
     parecer = request.form["parecer"]
-    status = request.form["status"]  # DEFERIDO / INDEFERIDO
+    status = request.form["status"]
 
     db = get_db()
     cur = db.cursor()
@@ -383,7 +392,6 @@ def parecer(id):
     db.close()
 
     return redirect("/")
-
 
 # ---------------- ADMIN UNIDADES ----------------
 
@@ -440,6 +448,7 @@ def admin_users():
         if new_role not in ["user", "unit_admin", "secretaria", "coordenacao", "admin"]:
             return "Role inválido", 400
 
+        # 🔴 ADMIN
         if role == "admin":
             if user_id == session["user_id"] and new_role != "admin":
                 return "Você não pode remover seu próprio admin", 400
@@ -450,23 +459,22 @@ def admin_users():
                 WHERE id=%s
             """, (new_unidade, new_role, user_id))
 
+        # 🟡 UNIT ADMIN
         elif role == "unit_admin":
 
-    # ❌ não pode virar admin
             if new_role == "admin":
                 return "Sem permissão", 403
 
-    # ❌ não pode criar outro unit_admin
-    if new_role == "unit_admin":
-        return "Sem permissão", 403
+            if new_role == "unit_admin":
+                return "Sem permissão", 403
 
-    cur.execute("""
-        UPDATE usuarios
-        SET role=%s
-        WHERE id=%s AND unidade_id=%s
-    """, (new_role, user_id, unidade_id))
+            cur.execute("""
+                UPDATE usuarios
+                SET role=%s
+                WHERE id=%s AND unidade_id=%s
+            """, (new_role, user_id, unidade_id))
 
-    db.commit()
+        db.commit()
 
     # ---------------- LISTAGEM ----------------
     if role == "admin":
