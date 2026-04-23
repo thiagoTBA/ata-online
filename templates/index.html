@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#111827">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ata Online</title>
+<title>ATA Online</title>
 
 <style>
 * { box-sizing: border-box; }
 
 body {
   margin:0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  font-family: system-ui;
   background:#f2f3f5;
 }
 
@@ -19,16 +17,13 @@ body {
   background:#111827;
   color:white;
   padding:15px;
-  font-size:18px;
   font-weight:bold;
-  position:sticky;
-  top:0;
 }
 
 .container {
-  padding:15px;
   max-width:600px;
   margin:auto;
+  padding:15px;
 }
 
 .card {
@@ -39,249 +34,131 @@ body {
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
 }
 
-input, textarea {
+input, textarea, select {
   width:100%;
   padding:12px;
   margin-top:8px;
   border-radius:10px;
   border:1px solid #ddd;
-  font-size:14px;
 }
 
 button {
   width:100%;
-  padding:14px;
+  padding:12px;
   margin-top:10px;
   background:#2563eb;
   color:white;
   border:none;
-  border-radius:12px;
-  font-size:15px;
+  border-radius:10px;
   font-weight:bold;
 }
 
-button:hover {
-  background:#1d4ed8;
-}
-
-.search {
-  margin-bottom:10px;
-}
-
 .tag {
-  font-size:12px;
-  padding:4px 8px;
+  padding:5px 10px;
   border-radius:8px;
+  font-size:12px;
   display:inline-block;
   margin-top:5px;
 }
 
-.tag.pendente { 
-  background:#fff7ed; 
-  color:#f59e0b;
-}
+.p1 { background:#fef3c7; color:#b45309; }
+.p2 { background:#fde68a; color:#92400e; }
+.ok { background:#d1fae5; color:#065f46; }
+.no { background:#fee2e2; color:#991b1b; }
 
-.tag.entregue { 
-  background:#ecfdf5; 
-  color:#10b981;
-}
-
-img {
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
-  cursor:pointer;
-}
-
-.footer {
-  text-align:center;
-  font-size:12px;
-  color:#999;
-  margin-top:20px;
-}
-
-/* TOAST */
-#toast {
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#10b981;
-  color:white;
-  padding:12px 20px;
-  border-radius:10px;
-  display:none;
-  font-weight:bold;
-}
-
-/* MODAL */
-#modal {
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.8);
-  justify-content:center;
-  align-items:center;
-}
-
-#modal img {
-  max-width:90%;
-  max-height:90%;
-}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  📦 Ata Online 
+  📄 ATA Online
   <span style="float:right">
-    👤 {{ username }}
-
-    {% if session["role"] == "admin" %}
-      🔴 Admin
-    {% elif session["role"] == "unit_admin" %}
-      🟡 Unidade
-    {% else %}
-      🔵 User
-    {% endif %}
-
-    | <a href="/logout" style="color:white;">Sair</a>
+    👤 {{ username }} | <a href="/logout" style="color:white;">Sair</a>
   </span>
-
-  {% if session["role"] == "admin" %}
-  <br>
-  <a href="/admin/users">👥 Usuários</a> |
-  <a href="/admin/unidades">🏢 Unidades</a> |
-  <a href="/admin/logs">📜 Logs</a>
-
-  {% elif session["role"] == "unit_admin" %}
-  <br>
-  <a href="/admin/users">👥 Usuários</a>
-  {% endif %}
 </div>
 
 <div class="container">
 
+<!-- 📌 NOVO REQUERIMENTO -->
 <div class="card">
-  📊 Total: <b>{{ total }}</b><br>
-  🟡 Pendentes: <b>{{ pendentes }}</b><br>
-  🟢 Entregues: <b>{{ entregues }}</b>
-</div>
+<form method="POST" action="/add" enctype="multipart/form-data">
 
-<div class="card">
-  <div style="background:#eee; border-radius:10px; overflow:hidden;">
-    <div style="
-      width: {{ (entregues / total * 100) if total > 0 else 0 }}%;
-      background:#10b981;
-      padding:10px;
-      color:white;
-      text-align:center;
-      font-weight:bold;
-    ">
-      {{ (entregues / total * 100) | round(1) if total > 0 else 0 }}%
-    </div>
-  </div>
-</div>
+  <input name="aluno_nome" placeholder="Nome do aluno" required>
+  <input name="cpf" placeholder="CPF">
+  <input name="email" placeholder="Email">
+  <input name="telefone" placeholder="Telefone">
+  <input name="curso" placeholder="Curso">
 
-<form method="GET" class="search">
-  <input name="q" value="{{ request.args.get('q','') }}" placeholder="🔍 Buscar...">
-</form>
+  <select name="tipo" required>
+    <option value="">Tipo de solicitação</option>
+    <option value="1">Declaração</option>
+    <option value="2">Aproveitamento</option>
+    <option value="11">Trancamento</option>
+    <option value="13">Transferência</option>
+    <option value="18">Revisão</option>
+    <option value="19">Recurso</option>
+    <option value="20">2ª chamada</option>
+    <option value="21">Justificativa</option>
+    <option value="22">Outros</option>
+  </select>
 
-<div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data" id="form" autocomplete="off">
-  <input name="destinatario" placeholder="Destinatário" required>
-  <textarea name="descricao" placeholder="Descrição" required></textarea>
-  <input name="responsavel" placeholder="Responsável" required>
+  <!-- 🔥 AQUI SIM -->
+  <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
 
-  <input type="file" name="imagem" id="fileInput">
-  <div id="preview"></div>
+  <textarea name="justificativa" placeholder="Justificativa"></textarea>
 
-  <button type="submit" id="btn">Salvar Ata</button>
+  <button>Criar Requerimento</button>
 </form>
 </div>
 
+<!-- 📋 LISTA -->
 {% for a in atas %}
 <div class="card">
 
-  <b>{{ a[1] }}</b><br>
-  <small>{{ a[2] }}</small><br>
-  👤 {{ a[3] }}<br>
+  <b>👨‍🎓 {{ a[1] }}</b><br>
+  📌 Tipo: {{ a[6] }}<br>
+  📅 Criado: {{ a[14] }}<br>
 
-  {% if a[5] %}
-    <img src="{{ a[5] }}" onclick="openImage(this.src)">
+  <!-- STATUS -->
+  {% if a[8] == "PENDENTE" %}
+    <div class="tag p1">🟡 Pendente</div>
+  {% elif a[8] == "EM_ATENDIMENTO" %}
+    <div class="tag p1">🟡 Em atendimento</div>
+  {% elif a[8] == "AGUARDANDO_COORD" %}
+    <div class="tag p2">🟠 Coordenação</div>
+  {% elif a[8] == "DEFERIDO" %}
+    <div class="tag ok">🟢 Deferido</div>
+  {% elif a[8] == "INDEFERIDO" %}
+    <div class="tag no">🔴 Indeferido</div>
   {% endif %}
 
-  {% if a[4] == 'pendente' %}
-    <div class="tag pendente">🟡 Pendente</div><br>
+  <!-- SECRETARIA -->
+  {% if session["role"] in ["admin","unit_admin"] and not a[10] %}
+  <form method="POST" action="/atender/{{ a[0] }}">
+    <input name="numero" placeholder="Nº requerimento">
+    <button>Atender</button>
+  </form>
+  {% endif %}
 
-    <form method="POST" action="/done/{{ a[0] }}">
-      <button onclick="notify(); this.disabled=true;">
-        ✔ Marcar como entregue
-      </button>
-    </form>
+  <!-- COORDENAÇÃO -->
+  {% if a[8] == "AGUARDANDO_COORD" %}
+  <form method="POST" action="/parecer/{{ a[0] }}">
+    <input name="parecer" placeholder="Parecer">
 
-  {% else %}
-    <div class="tag entregue">🟢 Entregue</div>
+    <select name="status">
+      <option value="DEFERIDO">Deferir</option>
+      <option value="INDEFERIDO">Indeferir</option>
+    </select>
+
+    <button>Enviar parecer</button>
+  </form>
   {% endif %}
 
 </div>
 {% endfor %}
 
-<div class="footer">
-Ata System v1 🚀
 </div>
-
-</div>
-
-<div id="toast">✅ Ata entregue!</div>
-
-<div id="modal">
-  <img id="modalImg">
-</div>
-
-<script>
-const input = document.getElementById("fileInput");
-const preview = document.getElementById("preview");
-
-input.addEventListener("change", function() {
-  preview.innerHTML = "";
-  const file = this.files[0];
-  if (!file) return;
-
-  const img = document.createElement("img");
-  img.src = URL.createObjectURL(file);
-  preview.appendChild(img);
-});
-
-function notify() {
-  const toast = document.getElementById("toast");
-  toast.style.display = "block";
-  setTimeout(() => toast.style.display = "none", 2000);
-}
-
-function openImage(src) {
-  document.getElementById("modal").style.display = "flex";
-  document.getElementById("modalImg").src = src;
-}
-
-document.getElementById("modal").onclick = () => {
-  document.getElementById("modal").style.display = "none";
-};
-
-const form = document.getElementById("form");
-const btn = document.getElementById("btn");
-
-form.addEventListener("submit", () => {
-  btn.innerText = "Salvando...";
-  btn.disabled = true;
-});
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/sw.js");
-}
-</script>
 
 </body>
 </html>

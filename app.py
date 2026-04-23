@@ -288,58 +288,113 @@ def add():
     if "user_id" not in session:
         return redirect("/login")
 
-    destinatario = request.form["destinatario"].strip()
-    descricao = request.form["descricao"].strip()
-    responsavel = request.form["responsavel"].strip()
+    aluno_nome = request.form["aluno_nome"]
+    cpf = request.form.get("cpf")
+    email = request.form.get("email")
+    telefone = request.form.get("telefone")
+    curso = request.form.get("curso")
 
-    if not destinatario or not descricao or not responsavel:
-        return "Campos inválidos"
+    tipo = int(request.form["tipo"])
+    justificativa = request.form.get("justificativa")
+
+    # 📎 upload
+    file = request.files.get("anexo")
+    anexo_url = None
+
+    if file and file.filename:
+        result = cloudinary.uploader.upload(file)
+        anexo_url = result["secure_url"]
+
+    # 🔥 regra
+    if tipo in [2,11,13,18,19,20,21,22]:
+        status = "AGUARDANDO_COORD"
+    else:
+        status = "EM_ATENDIMENTO"
 
     db = get_db()
     cur = db.cursor()
 
-    file = request.files.get("imagem")
-    image_url = ""
-
-    if file and file.filename:
-        if not file.filename.lower().endswith((".png",".jpg",".jpeg",".webp")):
-            return "Formato inválido"
-
-        file.seek(0, os.SEEK_END)
-        size = file.tell()
-        file.seek(0)
-
-        if size > 5 * 1024 * 1024:
-            return "Imagem muito grande"
-
-        result = cloudinary.uploader.upload(file)
-        image_url = result["secure_url"]
-
     cur.execute("""
         INSERT INTO atas_saida
-        (destinatario, descricao, responsavel, imagem, usuario_id, unidade_id)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        RETURNING id
+        (aluno_nome, cpf, email, telefone, curso,
+         tipo, justificativa, status,
+         anexo_url,
+         usuario_id, unidade_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
-        destinatario,
-        descricao,
-        responsavel,
-        image_url,
-        session["user_id"],
-        session["unidade_id"]
+        aluno_nome, cpf, email, telefone, curso,
+        tipo, justificativa, status,
+        anexo_url,
+        session["user_id"], session["unidade_id"]
     ))
 
-    id_registro = cur.fetchone()[0]
     db.commit()
-
-    enviar_para_sheets(id_registro, destinatario, descricao, responsavel, image_url)
-    log_action(session["user_id"], "CREATE_ATA", destinatario)
-
     cur.close()
     db.close()
 
     return redirect("/")
 
+# ---------------- SECRETARIA ----------
+@app.route("/atender/<int:id>", methods=["POST"])
+def atender(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    numero = request.form["numero"]
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        UPDATE atas_saida
+        SET
+          numero_requerimento=%s,
+          atendente=%s,
+          data_atendimento=NOW()
+        WHERE id=%s
+    """, (
+        numero,
+        session["username"],
+        id
+    ))
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    return redirect("/")
+# ---------------- COORDENAÇÃO ----------------
+@app.route("/parecer/<int:id>", methods=["POST"])
+def parecer(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    parecer = request.form["parecer"]
+    status = request.form["status"]  # DEFERIDO / INDEFERIDO
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        UPDATE atas_saida
+        SET
+          parecer=%s,
+          coordenador=%s,
+          data_parecer=NOW(),
+          status=%s
+        WHERE id=%s
+    """, (
+        parecer,
+        session["username"],
+        status,
+        id
+    ))
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    return redirect("/")
 # ---------------- DONE ----------------
 
 @app.route("/done/<int:id>", methods=["POST"])
