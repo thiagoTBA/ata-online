@@ -10,6 +10,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import psycopg2.extras
 import cloudinary
 import cloudinary.uploader
+import random
+import string
 
 # ---------------- CLOUDINARY ----------------
 cloudinary.config(
@@ -187,6 +189,52 @@ def logout():
     session.clear()
     return redirect("/login")
 
+
+# ---------------- gera pass ----------------
+def gerar_senha(tamanho=6):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=tamanho))
+# ---------------- caduser ----------------
+@app.route("/admin/create_user", methods=["POST"])
+def create_user():
+    if session.get("role") not in ["admin", "unit_admin", "secretaria"]:
+        return "Sem permissão", 403
+
+    username = request.form.get("username")
+    cpf = request.form.get("cpf")
+    unidade_id = session.get("unidade_id")
+
+    if not username or not cpf:
+        return "Dados obrigatórios", 400
+
+    senha = gerar_senha()
+    senha_hash = generate_password_hash(senha)
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO usuarios (username, password, unidade_id, role)
+            VALUES (%s, %s, %s, %s)
+        """, (cpf, senha_hash, unidade_id, "user"))
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        return f"Erro: {e}"
+
+    finally:
+        cur.close()
+        db.close()
+
+    # 🔥 mostra a senha gerada
+    return f"""
+    <h2>Usuário criado</h2>
+    <p><b>Login:</b> {cpf}</p>
+    <p><b>Senha:</b> {senha}</p>
+    <a href="/">Voltar</a>
+    """
 # ---------------- INDEX ----------------
 @app.route("/")
 def index():
@@ -240,6 +288,56 @@ def index():
         username=session.get("username"),
         role=role
     )
+
+@app.route("/secretaria")
+def secretaria():
+    return "painel secretaria"
+
+# ---------------- SECRETARIA ----------------
+@app.route("/secretaria")
+def secretaria():
+    if session.get("role") not in ["secretaria", "unit_admin", "admin"]:
+        return redirect("/")
+
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute("""
+        SELECT * FROM atas_saida
+        WHERE unidade_id=%s
+        ORDER BY id DESC
+    """, (session["unidade_id"],))
+
+    atas = cur.fetchall()
+
+    for a in atas:
+        a["protocolo"] = formatar_protocolo(a["id"])
+
+    return render_template("secretaria.html", atas=atas, tipos=TIPOS, role=session["role"])
+
+
+# ---------------- COORDENAÇÃO ----------------
+@app.route("/coordenacao")
+def coordenacao():
+    if session.get("role") not in ["coordenacao", "admin"]:
+        return redirect("/")
+
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute("""
+        SELECT * FROM atas_saida
+        WHERE unidade_id=%s
+        AND status='AGUARDANDO_COORD'
+        ORDER BY id DESC
+    """, (session["unidade_id"],))
+
+    atas = cur.fetchall()
+
+    for a in atas:
+        a["protocolo"] = formatar_protocolo(a["id"])
+
+    return render_template("coordenacao.html", atas=atas, tipos=TIPOS, role=session["role"])
 # ---------------- ADD ----------------
 
 @app.route("/add", methods=["POST"])

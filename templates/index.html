@@ -74,6 +74,13 @@ button {
 <div class="header">
   📄 protocolo.ia
   <span style="float:right">
+    {% if role in ["secretaria","unit_admin","admin"] %}
+  <a href="/secretaria">🏢 Secretaria</a>
+{% endif %}
+
+{% if role in ["coordenacao","admin"] %}
+  <a href="/coordenacao">🎓 Coordenação</a>
+{% endif %}
 
   {% if role == "admin" %}
     <a href="/admin/users" style="color:white; margin-right:10px;">👥 Usuários</a>
@@ -92,6 +99,19 @@ button {
 </div>
 
 <div class="container">
+
+
+{% if session["role"] in ["admin","unit_admin","secretaria"] %}
+<div class="card">
+  <h3>➕ Cadastrar Aluno</h3>
+
+  <form method="POST" action="/admin/create_user">
+    <input name="username" placeholder="Nome do aluno" required>
+    <input name="cpf" placeholder="CPF (login)" required>
+    <button>Criar acesso</button>
+  </form>
+</div>
+{% endif %}
 
 <!-- 📌 NOVO REQUERIMENTO -->
 <div class="card">

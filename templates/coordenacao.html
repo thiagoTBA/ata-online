@@ -1,0 +1,21 @@
+<h2>🎓 Painel Coordenação</h2>
+
+{% for a in atas %}
+<div class="card">
+
+  <b>{{ a["aluno_nome"] }}</b><br>
+  📄 {{ a["protocolo"] }}<br>
+
+  <form method="POST" action="/parecer/{{ a["id"] }}">
+    <input name="parecer" placeholder="Parecer">
+
+    <select name="status">
+      <option value="DEFERIDO">Deferir</option>
+      <option value="INDEFERIDO">Indeferir</option>
+    </select>
+
+    <button>Enviar</button>
+  </form>
+
+</div>
+{% endfor %}
