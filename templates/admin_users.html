@@ -70,6 +70,8 @@ button {
 .admin { background:#fee2e2; color:#b91c1c; }
 .unit { background:#fef3c7; color:#b45309; }
 .user { background:#e0f2fe; color:#0369a1; }
+.coord { background:#e0e7ff; color:#3730a3; }
+.secre { background:#dcfce7; color:#166534; }
 </style>
 </head>
 
@@ -101,6 +103,10 @@ button {
       <span class="badge admin">Admin</span>
     {% elif u[2] == 'unit_admin' %}
       <span class="badge unit">Admin Unidade</span>
+    {% elif u[2] == 'secretaria' %}
+      <span class="badge secre">Secretaria</span>
+    {% elif u[2] == 'coordenacao' %}
+      <span class="badge coord">Coordenação</span>
     {% else %}
       <span class="badge user">User</span>
     {% endif %}
@@ -125,17 +131,29 @@ button {
   <!-- 🔥 ROLE -->
   <td>
     <select name="role">
-      <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
+
+      <option value="user" {% if u[2]=='user' %}selected{% endif %}>
+        👤 User
+      </option>
+
+      <option value="secretaria" {% if u[2]=='secretaria' %}selected{% endif %}>
+        🏢 Secretaria
+      </option>
+
+      <option value="coordenacao" {% if u[2]=='coordenacao' %}selected{% endif %}>
+        🎓 Coordenação
+      </option>
 
       <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>
-        Admin Unidade
+        🧑‍💼 Admin Unidade
       </option>
 
       {% if session["role"] == "admin" %}
       <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>
-        Admin Sistema
+        🔥 Admin Sistema
       </option>
       {% endif %}
+
     </select>
   </td>
 
