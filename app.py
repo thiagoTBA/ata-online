@@ -231,6 +231,7 @@ def index():
     atas_formatadas = []
 
     for a in atas:
+        print(a)
         a = list(a)
         numero = a[0]
 

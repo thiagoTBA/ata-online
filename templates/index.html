@@ -135,9 +135,11 @@ button {
 
   <b>👨‍🎓 {{ a[1] }}</b><br>
 
-  {% if a[19] and a[10] %}
-    📄 Nº: {{ a[19] }}<br>
-  {% endif %}
+  {% if a[19] %}
+  <div class="tag ok">
+    📄 {{ a[19] }}
+  </div>
+{% endif %}
 
   <div class="tag p2">📌 {{ tipos.get(a[6], "Desconhecido") }}</div>
   📅 Criado: {{ a[17] }}<br>
