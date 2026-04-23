@@ -89,6 +89,23 @@ button {
   <input name="email" placeholder="Email">
   <input name="telefone" placeholder="Telefone">
   <input name="curso" placeholder="Curso">
+  <input name="rg" placeholder="RG">
+
+<select name="sexo">
+  <option value="">Sexo</option>
+  <option value="M">Masculino</option>
+  <option value="F">Feminino</option>
+</select>
+
+<select name="turno">
+  <option value="">Turno</option>
+  <option value="manha">Manhã</option>
+  <option value="tarde">Tarde</option>
+  <option value="noite">Noite</option>
+</select>
+
+<input name="municipio" placeholder="Município / Unidade">
+<input name="projeto" placeholder="Projeto">
 
   <select name="tipo" required>
     <option value="">Tipo de solicitação</option>
@@ -117,7 +134,7 @@ button {
 <div class="card">
 
   <b>👨‍🎓 {{ a[1] }}</b><br>
-  📌 Tipo: {{ a[6] }}<br>
+  📌 Tipo: {{ tipos.get(a[6], "Desconhecido") }}<br>
   📅 Criado: {{ a[14] }}<br>
 
   <!-- STATUS -->
@@ -132,6 +149,11 @@ button {
   {% elif a[8] == "INDEFERIDO" %}
     <div class="tag no">🔴 Indeferido</div>
   {% endif %}
+  <!-- 📎 ANEXO (AQUI) -->
+{% if a[18] %}
+  <br>
+  <a href="{{ a[18] }}" target="_blank">📎 Ver anexo</a>
+{% endif %}
 
   <!-- SECRETARIA -->
   {% if session["role"] in ["admin","unit_admin"] and not a[10] %}

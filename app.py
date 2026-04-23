@@ -91,7 +91,32 @@ def log_action(user_id, acao, detalhes=""):
         db.close()
     except:
         pass
+# ---------------- HELPERS ----------------
 
+TIPOS = {
+    1: "Alterações Cadastrais",
+    2: "Mudança de Turno",
+    3: "Cancelamento de Matrícula",
+    4: "Declaração com Histórico",
+    5: "Declaração de Conclusão",
+    6: "Declaração de Matrícula",
+    7: "Declaração de Frequência",
+    8: "Declaração de Comparecimento",
+    9: "Declaração de Estágio",
+    10: "Declaração de Instrutoria",
+    11: "Revisão de Notas",
+    12: "2ª Via / Correção",
+    13: "2ª Chamada",
+    14: "Transferência",
+    15: "Certificação Intermediária",
+    16: "Histórico Escolar",
+    17: "Diploma/Certificado",
+    18: "Reoferta",
+    19: "Aproveitamento",
+    20: "Atividade Domiciliar",
+    21: "Justificativa de Faltas",
+    22: "Outros"
+}
 # ---------------- AUTH ----------------
 
 @app.route("/register", methods=["GET", "POST"])
@@ -201,35 +226,29 @@ def index():
     unidade_id = session.get("unidade_id")
     user_id = session.get("user_id")
 
-    if not role:
-        return redirect("/logout")
-
     db = get_db()
     cur = db.cursor()
 
     q = request.args.get("q", "").strip()
 
     try:
-        # 🔴 ADMIN
         if role == "admin":
             if q:
                 cur.execute("""
                     SELECT * FROM atas_saida
-                    WHERE destinatario ILIKE %s OR descricao ILIKE %s
+                    WHERE aluno_nome ILIKE %s
                     ORDER BY id DESC LIMIT 100
-                """, (f"%{q}%", f"%{q}%"))
+                """, (f"%{q}%",))
             else:
                 cur.execute("SELECT * FROM atas_saida ORDER BY id DESC LIMIT 100")
 
-        # 🟡 ADMIN UNIDADE
         elif role == "unit_admin":
             if q:
                 cur.execute("""
                     SELECT * FROM atas_saida
-                    WHERE unidade_id=%s
-                    AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                    WHERE unidade_id=%s AND aluno_nome ILIKE %s
                     ORDER BY id DESC LIMIT 100
-                """, (unidade_id, f"%{q}%", f"%{q}%"))
+                """, (unidade_id, f"%{q}%"))
             else:
                 cur.execute("""
                     SELECT * FROM atas_saida
@@ -237,15 +256,13 @@ def index():
                     ORDER BY id DESC LIMIT 100
                 """, (unidade_id,))
 
-        # 🔵 USER
-        elif role == "user":
+        else:
             if q:
                 cur.execute("""
                     SELECT * FROM atas_saida
-                    WHERE usuario_id=%s
-                    AND (destinatario ILIKE %s OR descricao ILIKE %s)
+                    WHERE usuario_id=%s AND aluno_nome ILIKE %s
                     ORDER BY id DESC LIMIT 100
-                """, (user_id, f"%{q}%", f"%{q}%"))
+                """, (user_id, f"%{q}%"))
             else:
                 cur.execute("""
                     SELECT * FROM atas_saida
@@ -253,31 +270,25 @@ def index():
                     ORDER BY id DESC LIMIT 100
                 """, (user_id,))
 
-        # 🚨 QUALQUER COISA FORA DISSO
-        else:
-            return redirect("/logout")
-
         atas = cur.fetchall()
-
-    except Exception as e:
-        print("ERRO INDEX:", e)
-        return "Erro interno", 500
 
     finally:
         cur.close()
         db.close()
 
-    # 📊 métricas
     total = len(atas)
-    pendentes = len([a for a in atas if a[4] == "pendente"])
-    entregues = len([a for a in atas if a[4] == "entregue"])
+    pendentes = len([a for a in atas if a[8] in ["PENDENTE","EM_ATENDIMENTO"]])
+    aguardando = len([a for a in atas if a[8] == "AGUARDANDO_COORD"])
+    finalizados = len([a for a in atas if a[8] in ["DEFERIDO","INDEFERIDO"]])
 
     return render_template(
         "index.html",
         atas=atas,
+        tipos=TIPOS,
         total=total,
         pendentes=pendentes,
-        entregues=entregues,
+        aguardando=aguardando,
+        finalizados=finalizados,
         username=session.get("username")
     )
 
@@ -293,6 +304,11 @@ def add():
     email = request.form.get("email")
     telefone = request.form.get("telefone")
     curso = request.form.get("curso")
+    rg = request.form.get("rg")
+    sexo = request.form.get("sexo")
+    turno = request.form.get("turno")
+    municipio = request.form.get("municipio")
+    projeto = request.form.get("projeto")
 
     tipo = int(request.form["tipo"])
     justificativa = request.form.get("justificativa")
@@ -301,11 +317,26 @@ def add():
     file = request.files.get("anexo")
     anexo_url = None
 
+    allowed = (".pdf", ".png", ".jpg", ".jpeg")
+
     if file and file.filename:
+        filename = file.filename.lower()
+
+        if not filename.endswith(allowed):
+            return "Arquivo inválido"
+
+        # 🔒 limite de tamanho (opcional mas recomendado)
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+
+        if size > 5 * 1024 * 1024:
+            return "Arquivo muito grande (máx 5MB)"
+
         result = cloudinary.uploader.upload(file)
         anexo_url = result["secure_url"]
 
-    # 🔥 regra
+    # 🔥 regra de fluxo
     if tipo in [2,11,13,18,19,20,21,22]:
         status = "AGUARDANDO_COORD"
     else:
@@ -319,12 +350,14 @@ def add():
         (aluno_nome, cpf, email, telefone, curso,
          tipo, justificativa, status,
          anexo_url,
+         rg, sexo, turno, municipio, projeto,
          usuario_id, unidade_id)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         aluno_nome, cpf, email, telefone, curso,
         tipo, justificativa, status,
         anexo_url,
+        rg, sexo, turno, municipio, projeto,
         session["user_id"], session["unidade_id"]
     ))
 
@@ -486,16 +519,15 @@ def admin_users():
 
     # ---------------- UPDATE ----------------
     if request.method == "POST":
-        user_id = request.form.get("user_id")
+        user_id = int(request.form.get("user_id"))
         new_unidade = request.form.get("unidade_id")
         new_role = request.form.get("role")
 
         if new_role not in ["user", "unit_admin", "admin"]:
             return "Role inválido", 400
 
-        # 🔴 ADMIN → pode tudo
         if role == "admin":
-            if int(user_id) == session["user_id"] and new_role != "admin":
+            if user_id == session["user_id"] and new_role != "admin":
                 return "Você não pode remover seu próprio admin", 400
 
             cur.execute("""
@@ -504,8 +536,7 @@ def admin_users():
                 WHERE id=%s
             """, (new_unidade, new_role, user_id))
 
-        # 🟡 UNIT_ADMIN → limitado
-        else:
+        elif role == "unit_admin":
             if new_role == "admin":
                 return "Sem permissão", 403
 
@@ -516,6 +547,31 @@ def admin_users():
             """, (new_role, user_id, unidade_id))
 
         db.commit()
+
+    # ---------------- LISTAGEM ----------------
+    if role == "admin":
+        cur.execute("""
+            SELECT id, username, role, created_at, unidade_id
+            FROM usuarios
+            ORDER BY id
+        """)
+    else:
+        cur.execute("""
+            SELECT id, username, role, created_at, unidade_id
+            FROM usuarios
+            WHERE unidade_id=%s
+            ORDER BY id
+        """, (unidade_id,))
+
+    users = cur.fetchall()
+
+    cur.execute("SELECT id, nome FROM unidades ORDER BY nome")
+    unidades = cur.fetchall()
+
+    cur.close()
+    db.close()
+
+    return render_template("admin_users.html", users=users, unidades=unidades)
 
     # ---------------- LISTAGEM ----------------
     if role == "admin":
