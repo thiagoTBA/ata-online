@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import send_from_directory
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-
+import psycopg2.extras
 import cloudinary
 import cloudinary.uploader
 
@@ -198,7 +198,9 @@ def index():
     user_id = session.get("user_id")
 
     db = get_db()
-    cur = db.cursor()
+
+    # 🔥 AQUI A CORREÇÃO
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
         if role == "admin":
@@ -227,31 +229,17 @@ def index():
         cur.close()
         db.close()
 
-    # 🔥 adiciona protocolo formatado
-    atas_formatadas = []
-
+    # 🔥 PROTOCOLO LIMPO
     for a in atas:
-        print(a)
-        a = list(a)
-        numero = a[0]
-
-        if numero:
-            protocolo = formatar_protocolo(numero)
-        else:
-            protocolo = None
-
-        a.append(protocolo)
-        atas_formatadas.append(a)
+        a["protocolo"] = formatar_protocolo(a["id"])
 
     return render_template(
         "index.html",
-        atas=atas_formatadas,
+        atas=atas,
         tipos=TIPOS,
         username=session.get("username"),
-        role=role  
+        role=role
     )
-
-
 # ---------------- ADD ----------------
 
 @app.route("/add", methods=["POST"])

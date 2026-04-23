@@ -91,21 +91,21 @@ button {
   <input name="curso" placeholder="Curso">
   <input name="rg" placeholder="RG">
 
-<select name="sexo">
-  <option value="">Sexo</option>
-  <option value="M">Masculino</option>
-  <option value="F">Feminino</option>
-</select>
+  <select name="sexo">
+    <option value="">Sexo</option>
+    <option value="M">Masculino</option>
+    <option value="F">Feminino</option>
+  </select>
 
-<select name="turno">
-  <option value="">Turno</option>
-  <option value="manha">Manhã</option>
-  <option value="tarde">Tarde</option>
-  <option value="noite">Noite</option>
-</select>
+  <select name="turno">
+    <option value="">Turno</option>
+    <option value="manha">Manhã</option>
+    <option value="tarde">Tarde</option>
+    <option value="noite">Noite</option>
+  </select>
 
-<input name="municipio" placeholder="Município / Unidade">
-<input name="projeto" placeholder="Projeto">
+  <input name="municipio" placeholder="Município / Unidade">
+  <input name="projeto" placeholder="Projeto">
 
   <select name="tipo" required>
     <option value="">Tipo de solicitação</option>
@@ -120,7 +120,6 @@ button {
     <option value="22">Outros</option>
   </select>
 
-  <!-- 🔥 AQUI SIM -->
   <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
 
   <textarea name="justificativa" placeholder="Justificativa"></textarea>
@@ -133,50 +132,57 @@ button {
 {% for a in atas %}
 <div class="card">
 
-  <b>👨‍🎓 {{ a[1] }}</b><br>
+  <!-- Nome -->
+  <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
 
-  {% if a[19] %}
-  <div class="tag ok">
-    📄 {{ a[19] }}
+  <!-- Protocolo -->
+  {% if a["protocolo"] %}
+    <div class="tag ok">
+      📄 {{ a["protocolo"] }}
+    </div>
+  {% endif %}
+
+  <!-- Tipo -->
+  <div class="tag p2">
+    📌 {{ tipos.get(a["tipo"], "Desconhecido") }}
   </div>
-{% endif %}
 
-  <div class="tag p2">📌 {{ tipos.get(a[6], "Desconhecido") }}</div>
-  📅 Criado: {{ a[17] }}<br>
+  <!-- Data -->
+  📅 Criado: {{ a["criado_em"] }}<br>
 
   <!-- STATUS -->
-  {% if a[8] == "PENDENTE" %}
+  {% if a["status"] == "PENDENTE" %}
     <div class="tag p1">🟡 Pendente</div>
-  {% elif a[8] == "EM_ATENDIMENTO" %}
+  {% elif a["status"] == "EM_ATENDIMENTO" %}
     <div class="tag p1">🟡 Em atendimento</div>
-  {% elif a[8] == "AGUARDANDO_COORD" %}
+  {% elif a["status"] == "AGUARDANDO_COORD" %}
     <div class="tag p2">🟠 Coordenação</div>
-  {% elif a[8] == "DEFERIDO" %}
+  {% elif a["status"] == "DEFERIDO" %}
     <div class="tag ok">🟢 Deferido</div>
-  {% elif a[8] == "INDEFERIDO" %}
+  {% elif a["status"] == "INDEFERIDO" %}
     <div class="tag no">🔴 Indeferido</div>
   {% endif %}
 
-  <!-- 📎 ANEXO -->
-  {% if a[18] %}
+  <!-- ANEXO -->
+  {% if a["anexo_url"] %}
     <br>
     <div class="tag ok">
-      <a href="{{ a[18] }}" target="_blank" style="text-decoration:none;color:inherit;">
+      <a href="{{ a["anexo_url"] }}" target="_blank" style="text-decoration:none;color:inherit;">
         📎 Ver anexo
       </a>
     </div>
   {% endif %}
 
-  <!-- 🏢 SECRETARIA -->
-  {% if session["role"] in ["admin","unit_admin","secretaria"] and not a[10] %}
-    <form method="POST" action="/atender/{{ a[0] }}">
+  <!-- SECRETARIA -->
+  {% if session["role"] in ["admin","unit_admin","secretaria"] and not a["atendente"] %}
+    <form method="POST" action="/atender/{{ a["id"] }}">
       <button>Atender</button>
     </form>
   {% endif %}
 
-  <!-- 🎓 COORDENAÇÃO -->
-  {% if session["role"] in ["admin","coordenacao"] and a[8] == "AGUARDANDO_COORD" %}
-    <form method="POST" action="/parecer/{{ a[0] }}">
+  <!-- COORDENAÇÃO -->
+  {% if session["role"] in ["admin","coordenacao"] and a["status"] == "AGUARDANDO_COORD" %}
+    <form method="POST" action="/parecer/{{ a["id"] }}">
       <input name="parecer" placeholder="Parecer">
 
       <select name="status">
