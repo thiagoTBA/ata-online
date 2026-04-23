@@ -184,17 +184,21 @@ button {
   📅 Criado: {{ a["criado_em"] }}<br>
 
   <!-- STATUS -->
-  {% if a["status"] == "PENDENTE" %}
-    <div class="tag p1">🟡 Pendente</div>
-  {% elif a["status"] == "EM_ATENDIMENTO" %}
-    <div class="tag p1">🟡 Em atendimento</div>
-  {% elif a["status"] == "AGUARDANDO_COORD" %}
-    <div class="tag p2">🟠 Coordenação</div>
-  {% elif a["status"] == "DEFERIDO" %}
-    <div class="tag ok">🟢 Deferido</div>
-  {% elif a["status"] == "INDEFERIDO" %}
-    <div class="tag no">🔴 Indeferido</div>
-  {% endif %}
+ {% if a["status"] == "EM_ATENDIMENTO" %}
+  <div class="tag p1">🟡 Em análise</div>
+
+{% elif a["status"] == "FINALIZADO" %}
+  <div class="tag ok">🟢 Resolvido pela secretaria</div>
+
+{% elif a["status"] == "AGUARDANDO_COORD" %}
+  <div class="tag p2">🟠 Em análise pela coordenação</div>
+
+{% elif a["status"] == "DEFERIDO" %}
+  <div class="tag ok">🟢 Deferido</div>
+
+{% elif a["status"] == "INDEFERIDO" %}
+  <div class="tag no">🔴 Indeferido</div>
+{% endif %}
 
   <!-- ANEXO -->
   {% if a["anexo_url"] %}

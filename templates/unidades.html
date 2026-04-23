@@ -1,20 +1,35 @@
-<h2>🏢 Unidades</h2>
+<div class="header">
+  🏢 Unidades
+</div>
 
-<form method="POST">
-  <input name="nome" placeholder="Nova unidade" required>
-  <button>Adicionar</button>
-</form>
+<div class="container">
 
-<table style="width:100%; margin-top:20px; border-collapse:collapse;">
-<tr style="background:#eee">
+<div class="card">
+  <h3>➕ Nova Unidade</h3>
+
+  <form method="POST">
+    <input name="nome" placeholder="Nome da unidade" required>
+    <button>Adicionar</button>
+  </form>
+</div>
+
+<div class="card">
+
+<table style="width:100%; border-collapse:collapse;">
+<tr style="background:#111827; color:white;">
   <th>ID</th>
   <th>Nome</th>
 </tr>
 
 {% for u in unidades %}
-<tr style="border-bottom:1px solid #ddd">
+<tr style="border-bottom:1px solid #eee">
   <td>{{ u[0] }}</td>
-  <td>{{ u[1] }}</td>
+  <td><b>{{ u[1] }}</b></td>
 </tr>
 {% endfor %}
+
 </table>
+
+</div>
+
+</div>

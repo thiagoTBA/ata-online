@@ -312,6 +312,31 @@ def secretaria():
 
     return render_template("secretaria.html", atas=atas, tipos=TIPOS, role=session["role"])
 
+@app.route("/finalizar/<int:id>", methods=["POST"])
+def finalizar(id):
+    if session.get("role") not in ["admin", "secretaria"]:
+        return "Sem permissão", 403
+
+
+    db = get_db()
+    cur = db.cursor()
+
+    log_action(session["user_id"], "FINALIZOU", f"id={id} | aluno={nome}")
+    aluno = cur.fetchone()
+    nome = aluno[0] if aluno else "desconhecido"
+
+    cur.execute("""
+        UPDATE atas_saida
+        SET status='FINALIZADO'
+        WHERE id=%s
+    """, (id,))
+    log_action(session["user_id"], "FINALIZOU", f"id={id}")
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    return redirect("/secretaria")
 
 # ---------------- COORDENAÇÃO ----------------
 @app.route("/coordenacao")
@@ -422,6 +447,8 @@ def atender(id):
 
     db = get_db()
     cur = db.cursor()
+    cur.execute("SELECT aluno_nome FROM atas_saida WHERE id=%s", (id,))
+    nome = cur.fetchone()[0]
 
     cur.execute("""
         UPDATE atas_saida
@@ -434,7 +461,7 @@ def atender(id):
         session["username"],
         id
     ))
-
+    log_action(session["user_id"], "ATENDEU", f"id={id} | aluno={nome}")
     db.commit()
     cur.close()
     db.close()
@@ -476,6 +503,31 @@ def parecer(id):
     db.close()
 
     return redirect("/")
+
+
+@app.route("/enviar_coord/<int:id>", methods=["POST"])
+def enviar_coord(id):
+    if session.get("role") not in ["admin", "secretaria"]:
+        return "Sem permissão", 403
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT aluno_nome FROM atas_saida WHERE id=%s", (id,))
+    aluno = cur.fetchone()
+    nome = aluno[0] if aluno else "desconhecido"
+
+    cur.execute("""
+        UPDATE atas_saida
+        SET status='AGUARDANDO_COORD'
+        WHERE id=%s
+    """, (id,))
+    log_action(session["user_id"], "FINALIZOU", f"id={id} | aluno={nome}")
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    return redirect("/secretaria")
 
 # ---------------- ADMIN UNIDADES ----------------
 
