@@ -289,9 +289,6 @@ def index():
         role=role
     )
 
-@app.route("/secretaria")
-def secretaria():
-    return "painel secretaria"
 
 # ---------------- SECRETARIA ----------------
 @app.route("/secretaria")
