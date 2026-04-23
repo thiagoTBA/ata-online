@@ -72,10 +72,23 @@ button {
 <body>
 
 <div class="header">
-  📄 ATA Online
+  📄 protocolo.ia
   <span style="float:right">
-    👤 {{ username }} | <a href="/logout" style="color:white;">Sair</a>
-  </span>
+
+  {% if role == "admin" %}
+    <a href="/admin/users" style="color:white; margin-right:10px;">👥 Usuários</a>
+    <a href="/admin/unidades" style="color:white; margin-right:10px;">🏢 Unidades</a>
+    <a href="/admin/logs" style="color:white; margin-right:10px;">📊 Logs</a>
+  {% endif %}
+
+  {% if role == "unit_admin" %}
+    <a href="/admin/users" style="color:white; margin-right:10px;">👥 Usuários</a>
+  {% endif %}
+
+  👤 {{ username }} |
+  <a href="/logout" style="color:white;">Sair</a>
+
+</span>
 </div>
 
 <div class="container">
