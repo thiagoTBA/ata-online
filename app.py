@@ -39,42 +39,13 @@ login_tentativas = {}
 def get_db():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# ---------------- GOOGLE SHEETS ----------------
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
-
-creds_dict = json.loads(os.getenv("GOOGLE_CREDS"))
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client = gspread.authorize(creds)
-sheet = client.open("ata-online").sheet1
-
-def enviar_para_sheets(id_registro, destinatario, descricao, responsavel, imagem):
-    try:
-        sheet.append_row([
-            id_registro,
-            destinatario,
-            descricao,
-            responsavel,
-            imagem,
-            "pendente",
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ])
-    except Exception as e:
-        print("ERRO SHEETS:", e)
-
-def atualizar_status_sheets(id_registro):
-    try:
-        records = sheet.get_all_values()
-        for i, row in enumerate(records):
-            if str(row[0]) == str(id_registro):
-                sheet.update_cell(i + 1, 6, "entregue")
-                break
-    except Exception as e:
-        print("ERRO UPDATE SHEETS:", e)
 
 # ---------------- HELPERS ----------------
+
+def formatar_protocolo(numero):
+    ano = datetime.now().year
+    return f"CETAM-{ano}-{str(numero).zfill(6)}"
+
 def is_admin():
     return session.get("role") == "admin"
 
@@ -229,46 +200,26 @@ def index():
     db = get_db()
     cur = db.cursor()
 
-    q = request.args.get("q", "").strip()
-
     try:
         if role == "admin":
-            if q:
-                cur.execute("""
-                    SELECT * FROM atas_saida
-                    WHERE aluno_nome ILIKE %s
-                    ORDER BY id DESC LIMIT 100
-                """, (f"%{q}%",))
-            else:
-                cur.execute("SELECT * FROM atas_saida ORDER BY id DESC LIMIT 100")
+            cur.execute("""
+                SELECT * FROM atas_saida
+                ORDER BY id DESC LIMIT 100
+            """)
 
         elif role == "unit_admin":
-            if q:
-                cur.execute("""
-                    SELECT * FROM atas_saida
-                    WHERE unidade_id=%s AND aluno_nome ILIKE %s
-                    ORDER BY id DESC LIMIT 100
-                """, (unidade_id, f"%{q}%"))
-            else:
-                cur.execute("""
-                    SELECT * FROM atas_saida
-                    WHERE unidade_id=%s
-                    ORDER BY id DESC LIMIT 100
-                """, (unidade_id,))
+            cur.execute("""
+                SELECT * FROM atas_saida
+                WHERE unidade_id=%s
+                ORDER BY id DESC LIMIT 100
+            """, (unidade_id,))
 
         else:
-            if q:
-                cur.execute("""
-                    SELECT * FROM atas_saida
-                    WHERE usuario_id=%s AND aluno_nome ILIKE %s
-                    ORDER BY id DESC LIMIT 100
-                """, (user_id, f"%{q}%"))
-            else:
-                cur.execute("""
-                    SELECT * FROM atas_saida
-                    WHERE usuario_id=%s
-                    ORDER BY id DESC LIMIT 100
-                """, (user_id,))
+            cur.execute("""
+                SELECT * FROM atas_saida
+                WHERE usuario_id=%s
+                ORDER BY id DESC LIMIT 100
+            """, (user_id,))
 
         atas = cur.fetchall()
 
@@ -276,21 +227,29 @@ def index():
         cur.close()
         db.close()
 
-    total = len(atas)
-    pendentes = len([a for a in atas if a[8] in ["PENDENTE","EM_ATENDIMENTO"]])
-    aguardando = len([a for a in atas if a[8] == "AGUARDANDO_COORD"])
-    finalizados = len([a for a in atas if a[8] in ["DEFERIDO","INDEFERIDO"]])
+    # 🔥 adiciona protocolo formatado
+    atas_formatadas = []
+
+    for a in atas:
+        a = list(a)
+        numero = a[9]
+
+        if numero:
+            protocolo = formatar_protocolo(numero)
+        else:
+            protocolo = None
+
+        a.append(protocolo)
+        atas_formatadas.append(a)
 
     return render_template(
         "index.html",
-        atas=atas,
+        atas=atas_formatadas,
         tipos=TIPOS,
-        total=total,
-        pendentes=pendentes,
-        aguardando=aguardando,
-        finalizados=finalizados,
-        username=session.get("username")
+        username=session.get("username"),
+        role=role  
     )
+
 
 # ---------------- ADD ----------------
 
@@ -373,20 +332,16 @@ def atender(id):
     if "user_id" not in session:
         return redirect("/login")
 
-    numero = request.form["numero"]
-
     db = get_db()
     cur = db.cursor()
 
     cur.execute("""
         UPDATE atas_saida
         SET
-          numero_requerimento=%s,
           atendente=%s,
           data_atendimento=NOW()
         WHERE id=%s
     """, (
-        numero,
         session["username"],
         id
     ))
@@ -428,48 +383,7 @@ def parecer(id):
     db.close()
 
     return redirect("/")
-# ---------------- DONE ----------------
 
-@app.route("/done/<int:id>", methods=["POST"])
-def done(id):
-    if "user_id" not in session:
-        return redirect("/login")
-
-    db = get_db()
-    cur = db.cursor()
-
-    if session["role"] == "admin":
-        cur.execute(
-            "UPDATE atas_saida SET status='entregue' WHERE id=%s",
-            (id,)
-        )
-
-    elif session["role"] == "unit_admin":
-        cur.execute("""
-            UPDATE atas_saida
-            SET status='entregue'
-            WHERE id=%s AND unidade_id=%s
-        """, (id, session["unidade_id"]))
-
-    else:
-        cur.execute("""
-            UPDATE atas_saida
-            SET status='entregue'
-            WHERE id=%s AND usuario_id=%s
-        """, (id, session["user_id"]))
-
-    if cur.rowcount == 0:
-        return "Sem permissão", 403
-
-    db.commit()
-
-    atualizar_status_sheets(id)
-    log_action(session["user_id"], "DONE_ATA", f"id={id}")
-
-    cur.close()
-    db.close()
-
-    return redirect("/")
 
 # ---------------- ADMIN UNIDADES ----------------
 
@@ -523,7 +437,7 @@ def admin_users():
         new_unidade = request.form.get("unidade_id")
         new_role = request.form.get("role")
 
-        if new_role not in ["user", "unit_admin", "admin"]:
+        if new_role not in ["user", "unit_admin", "secretaria", "coordenacao", "admin"]:
             return "Role inválido", 400
 
         if role == "admin":
@@ -537,41 +451,22 @@ def admin_users():
             """, (new_unidade, new_role, user_id))
 
         elif role == "unit_admin":
+
+    # ❌ não pode virar admin
             if new_role == "admin":
                 return "Sem permissão", 403
 
-            cur.execute("""
-                UPDATE usuarios
-                SET role=%s
-                WHERE id=%s AND unidade_id=%s
-            """, (new_role, user_id, unidade_id))
+    # ❌ não pode criar outro unit_admin
+    if new_role == "unit_admin":
+        return "Sem permissão", 403
 
-        db.commit()
+    cur.execute("""
+        UPDATE usuarios
+        SET role=%s
+        WHERE id=%s AND unidade_id=%s
+    """, (new_role, user_id, unidade_id))
 
-    # ---------------- LISTAGEM ----------------
-    if role == "admin":
-        cur.execute("""
-            SELECT id, username, role, created_at, unidade_id
-            FROM usuarios
-            ORDER BY id
-        """)
-    else:
-        cur.execute("""
-            SELECT id, username, role, created_at, unidade_id
-            FROM usuarios
-            WHERE unidade_id=%s
-            ORDER BY id
-        """, (unidade_id,))
-
-    users = cur.fetchall()
-
-    cur.execute("SELECT id, nome FROM unidades ORDER BY nome")
-    unidades = cur.fetchall()
-
-    cur.close()
-    db.close()
-
-    return render_template("admin_users.html", users=users, unidades=unidades)
+    db.commit()
 
     # ---------------- LISTAGEM ----------------
     if role == "admin":
@@ -597,6 +492,8 @@ def admin_users():
     db.close()
 
     return render_template("admin_users.html", users=users, unidades=unidades)
+
+    
 # ---------------- DELETE USER ----------------
 
 @app.route("/admin/delete_user/<int:id>", methods=["POST"])
@@ -620,10 +517,6 @@ def delete_user(id):
 
     return redirect("/admin/users")
 
-#-----------------uplodad -----------
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory('uploads', filename)
 # ---------------- LOGS ----------------
 
 @app.route("/admin/logs")

@@ -134,8 +134,13 @@ button {
 <div class="card">
 
   <b>👨‍🎓 {{ a[1] }}</b><br>
-  📌 Tipo: {{ tipos.get(a[6], "Desconhecido") }}<br>
-  📅 Criado: {{ a[14] }}<br>
+
+  {% if a[19] and a[10] %}
+    📄 Nº: {{ a[19] }}<br>
+  {% endif %}
+
+  <div class="tag p2">📌 {{ tipos.get(a[6], "Desconhecido") }}</div>
+  📅 Criado: {{ a[17] }}<br>
 
   <!-- STATUS -->
   {% if a[8] == "PENDENTE" %}
@@ -149,32 +154,36 @@ button {
   {% elif a[8] == "INDEFERIDO" %}
     <div class="tag no">🔴 Indeferido</div>
   {% endif %}
-  <!-- 📎 ANEXO (AQUI) -->
-{% if a[18] %}
-  <br>
-  <a href="{{ a[18] }}" target="_blank">📎 Ver anexo</a>
-{% endif %}
 
-  <!-- SECRETARIA -->
-  {% if session["role"] in ["admin","unit_admin"] and not a[10] %}
-  <form method="POST" action="/atender/{{ a[0] }}">
-    <input name="numero" placeholder="Nº requerimento">
-    <button>Atender</button>
-  </form>
+  <!-- 📎 ANEXO -->
+  {% if a[18] %}
+    <br>
+    <div class="tag ok">
+      <a href="{{ a[18] }}" target="_blank" style="text-decoration:none;color:inherit;">
+        📎 Ver anexo
+      </a>
+    </div>
   {% endif %}
 
-  <!-- COORDENAÇÃO -->
-  {% if a[8] == "AGUARDANDO_COORD" %}
-  <form method="POST" action="/parecer/{{ a[0] }}">
-    <input name="parecer" placeholder="Parecer">
+  <!-- 🏢 SECRETARIA -->
+  {% if session["role"] in ["admin","unit_admin","secretaria"] and not a[10] %}
+    <form method="POST" action="/atender/{{ a[0] }}">
+      <button>Atender</button>
+    </form>
+  {% endif %}
 
-    <select name="status">
-      <option value="DEFERIDO">Deferir</option>
-      <option value="INDEFERIDO">Indeferir</option>
-    </select>
+  <!-- 🎓 COORDENAÇÃO -->
+  {% if session["role"] in ["admin","coordenacao"] and a[8] == "AGUARDANDO_COORD" %}
+    <form method="POST" action="/parecer/{{ a[0] }}">
+      <input name="parecer" placeholder="Parecer">
 
-    <button>Enviar parecer</button>
-  </form>
+      <select name="status">
+        <option value="DEFERIDO">Deferir</option>
+        <option value="INDEFERIDO">Indeferir</option>
+      </select>
+
+      <button>Enviar parecer</button>
+    </form>
   {% endif %}
 
 </div>
