@@ -243,7 +243,8 @@ def create_user():
     finally:
         cur.close()
         db.close()
-
+    
+    log_action(session["user_id"], "CRIAR_USUARIO", f"user={cpf}")
     # 🔥 mostra a senha gerada
     return f"""
     <h2>Usuário criado</h2>
@@ -521,7 +522,8 @@ def tramitar(id):
     finally:
         cur.close()
         db.close()
-
+    
+    log_action(session["user_id"], "TRAMITOU", f"id={id} -> unidade={nova_unidade}")
     return redirect("/secretaria")
 # ---------------- COORDENAÇÃO ----------------
 @app.route("/coordenacao")
@@ -622,6 +624,7 @@ def add():
     db.commit()
     cur.close()
     db.close()
+    log_action(session["user_id"], "CRIAR_REQUERIMENTO", f"aluno={aluno_nome}")
 
     return redirect("/")
 
@@ -777,6 +780,7 @@ def parecer(id):
             ))
 
         db.commit()
+        log_action(session["user_id"], "PARECER", f"id={id} | {decisao}")
 
     except Exception as e:
         db.rollback()
@@ -788,6 +792,42 @@ def parecer(id):
 
     return redirect("/coordenacao")
 
+# ---------------- AUDITORIA ---------------
+@app.route("/admin/logs_unidade")
+def logs_unidade():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if session.get("role") not in ["admin", "unit_admin"]:
+        return "Sem permissão", 403
+
+    db = get_db()
+    cur = db.cursor()
+
+    # 🔥 pega logs só da unidade do admin
+    cur.execute("""
+        SELECT l.acao, l.detalhes, l.criado_em, u.username
+        FROM logs l
+        JOIN usuarios u ON u.id = l.user_id
+        WHERE u.unidade_id = %s
+        ORDER BY l.criado_em DESC
+        LIMIT 200
+    """, (session["unidade_id"],))
+
+    logs = [
+        {
+            "acao": r[0],
+            "detalhes": r[1],
+            "criado_em": r[2],
+            "username": r[3]
+        }
+        for r in cur.fetchall()
+    ]
+
+    cur.close()
+    db.close()
+
+    return render_template("logs_unidade.html", logs=logs)
 # ---------------- ANEXO ---------------
 @app.route("/coord_tramitar/<int:id>", methods=["POST"])
 def coord_tramitar(id):
@@ -880,6 +920,7 @@ def create_full_user():
         cur.close()
         db.close()
 
+    log_action(session["user_id"], "CRIAR_USUARIO", f"user={username}")
     return f"""
     <script>
     alert("Usuário criado!\\nLogin: {username}\\nSenha: {senha}");
@@ -923,6 +964,7 @@ def enviar_coord(id):
     db.commit()
     cur.close()
     db.close()
+    
 
     return redirect("/secretaria")
 
@@ -945,6 +987,7 @@ def admin_unidades():
         try:
             cur.execute("INSERT INTO unidades (nome) VALUES (%s)", (nome,))
             db.commit()
+            log_action(session["user_id"], "CRIAR_UNIDADE", f"nome={nome}")
         except:
             return "Unidade já existe"
 
@@ -999,6 +1042,7 @@ def admin_users():
                 WHERE id=%s AND unidade_id=%s
             """, (new_role, user_id, unidade_id))
 
+        
         db.commit()
 
     # ---------------- FILTROS ----------------
@@ -1120,11 +1164,34 @@ def change_password():
     db.commit()
     cur.close()
     db.close()
-
     log_action(session["user_id"], "CHANGE_PASSWORD")
 
     return redirect("/")
   
+# ---------------- DELETE unidade ----------------
+@app.route("/admin/delete_unidade/<int:id>", methods=["POST"])
+def delete_unidade(id):
+    if not is_admin():
+        return "Acesso negado", 403
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute("DELETE FROM unidades WHERE id=%s", (id,))
+        db.commit()
+
+        log_action(session["user_id"], "DELETE_UNIDADE", f"id={id}")
+
+    except Exception as e:
+        db.rollback()
+        return f"Erro ao excluir: {e}", 500
+
+    finally:
+        cur.close()
+        db.close()
+
+    return redirect("/admin/unidades")
 # ---------------- DELETE USER ----------------
 
 @app.route("/admin/delete_user/<int:id>", methods=["POST"])

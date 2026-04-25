@@ -97,6 +97,11 @@ button {
 
   </span>
 </div>
+<div style="margin-bottom:10px;">
+  <a href="/">🏠 Início</a> |
+  <a href="/secretaria">🏢 Secretaria</a> |
+  <a href="/coordenacao">🎓 Coordenação</a>
+</div>
 
 <div class="container">
 
@@ -195,6 +200,11 @@ button {
   {% elif a["status"] == "FINALIZADO" %}
     <div class="tag ok">🟢 Finalizado</div>
   {% endif %}
+  {% if a["mensagem"] %}
+  <div class="tag p2">
+    💬 {{ a["mensagem"] }}
+  </div>
+{% endif %}
   <!-- 🧭 TIMELINE -->
 <div style="margin-top:10px; font-size:13px">
 
@@ -245,20 +255,6 @@ button {
   {% if session["role"] in ["admin","secretaria"] and a["status"] == "PENDENTE" %}
     <form method="POST" action="/atender/{{ a["id"] }}">
       <button>Atender</button>
-    </form>
-  {% endif %}
-
-  <!-- COORD -->
-  {% if session["role"] in ["admin","coordenacao"] and a["status"] == "AGUARDANDO_COORD" %}
-    <form method="POST" action="/parecer/{{ a["id"] }}">
-      <input name="parecer" placeholder="Parecer">
-
-      <select name="status">
-        <option value="DEFERIDO">Deferir</option>
-        <option value="INDEFERIDO">Indeferir</option>
-      </select>
-
-      <button>Enviar parecer</button>
     </form>
   {% endif %}
 
@@ -327,6 +323,7 @@ document.getElementById("form-requerimento").addEventListener("submit", function
 
 });
 </script>
+
 
 </body>
 </html>

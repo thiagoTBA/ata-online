@@ -1,33 +1,90 @@
-<div class="header">
-  🎓 Painel Coordenação
-</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Logs da Unidade</title>
+
+<style>
+body {
+  font-family: system-ui;
+  background:#020617;
+  color:white;
+}
+
+.container {
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.header {
+  font-size:20px;
+  margin-bottom:15px;
+}
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:10px;
+}
+
+.tag {
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  display:inline-block;
+}
+
+.login { background:#22c55e; }
+.acao { background:#3b82f6; }
+.erro { background:#ef4444; }
+
+small {
+  color:#94a3b8;
+}
+</style>
+</head>
+
+<body>
 
 <div class="container">
 
-{% for a in atas %}
+<h2>📊 Logs da Unidade</h2>
+
+<div style="margin-bottom:10px;">
+  <a href="/">🏠 Início</a> |
+  <a href="/secretaria">🏢 Secretaria</a> |
+  <a href="/coordenacao">🎓 Coordenação</a>
+</div>
+
+{% for log in logs %}
 <div class="card">
 
-  <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
+  <b>👤 {{ log.username }}</b>
 
-  <div class="tag ok">📄 {{ a["protocolo"] }}</div>
+  <span class="tag acao">
+    {{ log.acao }}
+  </span>
 
-  <div class="tag p2">📌 {{ tipos.get(a["tipo"]) }}</div>
+  <br><br>
+
+  <div>
+    📄 {{ log.detalhes }}
+  </div>
 
   <br>
 
-  <form method="POST" action="/parecer/{{ a["id"] }}">
-
-    <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
-
-    <select name="status">
-      <option value="DEFERIDO">🟢 Deferir</option>
-      <option value="INDEFERIDO">🔴 Indeferir</option>
-    </select>
-
-    <button>Enviar decisão</button>
-  </form>
+  <small>⏱️ {{ log.criado_em }}</small>
 
 </div>
 {% endfor %}
 
+{% if not logs %}
+  <p>Nenhum log encontrado.</p>
+{% endif %}
+
 </div>
+
+</body>
+</html>

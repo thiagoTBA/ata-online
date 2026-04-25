@@ -1,35 +1,148 @@
-<div class="header">
-  🏢 Unidades
-</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Unidades</title>
+
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background: linear-gradient(135deg, #020617, #1e293b);
+  color: white;
+}
+
+.container {
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+.header {
+  font-size:22px;
+  font-weight:bold;
+  margin-bottom:15px;
+}
+
+.nav {
+  margin-bottom:15px;
+}
+
+.nav a {
+  color:#60a5fa;
+  text-decoration:none;
+  margin-right:10px;
+}
+
+.card {
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:20px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+
+input {
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  width:100%;
+  margin-bottom:10px;
+}
+
+button {
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.btn-add {
+  background:#2563eb;
+  color:white;
+}
+
+.btn-delete {
+  background:#ef4444;
+  color:white;
+  margin-top:5px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th {
+  background:#020617;
+  padding:10px;
+  text-align:left;
+}
+
+td {
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+tr:hover {
+  background:#334155;
+}
+</style>
+</head>
+
+<body>
 
 <div class="container">
 
+<div class="header">🏢 Gestão de Unidades</div>
+
+<div class="nav">
+  <a href="/">🏠 Início</a>
+  <a href="/admin/users">👥 Usuários</a>
+  <a href="/admin/unidades">🏢 Unidades</a>
+</div>
+
+<!-- 🔥 CRIAR -->
 <div class="card">
   <h3>➕ Nova Unidade</h3>
 
   <form method="POST">
     <input name="nome" placeholder="Nome da unidade" required>
-    <button>Adicionar</button>
+    <button class="btn-add">Adicionar</button>
   </form>
 </div>
 
+<!-- 🔥 LISTA -->
 <div class="card">
 
-<table style="width:100%; border-collapse:collapse;">
-<tr style="background:#111827; color:white;">
-  <th>ID</th>
-  <th>Nome</th>
-</tr>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Nome</th>
+      <th>Ações</th>
+    </tr>
 
-{% for u in unidades %}
-<tr style="border-bottom:1px solid #eee">
-  <td>{{ u[0] }}</td>
-  <td><b>{{ u[1] }}</b></td>
-</tr>
-{% endfor %}
+    {% for u in unidades %}
+    <tr>
+      <td>{{ u[0] }}</td>
 
-</table>
+      <td>
+        <b>{{ u[1] }}</b>
+      </td>
+
+      <td>
+        <form method="POST" action="/admin/delete_unidade/{{ u[0] }}">
+          <button class="btn-delete">Excluir</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+
+  </table>
 
 </div>
 
 </div>
+
+</body>
+</html>
