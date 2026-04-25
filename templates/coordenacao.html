@@ -21,12 +21,12 @@
   border-radius:10px;
   text-align:center;
   font-weight:bold;
+  background:#1e293b;
+  border-left:4px solid transparent;
 }
 
-/* 🔥 CORES */
-.AGUARDANDO_COORD { background: #7c3aed; }
-.RETORNADO_SECRETARIA { background: #14b8a6; }
-.FINALIZADO { background: #16a34a; }
+.card.AGUARDANDO_COORD { border-color:#8b5cf6; }
+.card.FINALIZADO { border-color:#22c55e; }
 
 table {
   width:100%;
@@ -40,41 +40,38 @@ th, td {
   vertical-align:top;
 }
 
-th {
-  text-align:left;
+tr {
+  background:#020617;
+  transition:0.2s;
 }
 
-/* 🔥 LINHA POR STATUS */
-tr.AGUARDANDO_COORD { border-left:5px solid #7c3aed; }
-tr.RETORNADO_SECRETARIA { border-left:5px solid #14b8a6; }
-tr.FINALIZADO { border-left:5px solid #16a34a; }
-
-td {
-  max-width:300px;
+tr:hover {
+  background:#1e293b;
 }
 
-/* 🔥 BOX */
+tr.AGUARDANDO_COORD { border-left:4px solid #8b5cf6; }
+tr.RETORNADO_SECRETARIA { border-left:4px solid #f97316; }
+tr.FINALIZADO { border-left:4px solid #22c55e; }
+
 .box {
   margin-top:8px;
   padding:10px;
-  background:#0f172a;
-  border-left:3px solid #7c3aed;
+  background:#020617;
+  border-left:3px solid #8b5cf6;
   border-radius:8px;
   word-break: break-word;
-  line-height:1.4;
 }
 
-/* 🔥 STATUS BADGE */
+/* BADGE */
 .status-badge {
-  padding:4px 8px;
-  border-radius:6px;
+  padding:4px 10px;
+  border-radius:999px;
   font-size:12px;
   font-weight:bold;
-  display:inline-block;
 }
 
 .status-AGUARDANDO_COORD { background:#ede9fe; color:#5b21b6; }
-.status-RETORNADO_SECRETARIA { background:#ccfbf1; color:#134e4a; }
+.status-RETORNADO_SECRETARIA { background:#ffedd5; color:#9a3412; }
 .status-FINALIZADO { background:#dcfce7; color:#166534; }
 
 textarea {
@@ -85,10 +82,6 @@ textarea {
 button {
   margin-top:5px;
   width:100%;
-  border:none;
-  padding:6px;
-  border-radius:6px;
-  cursor:pointer;
 }
 </style>
 
