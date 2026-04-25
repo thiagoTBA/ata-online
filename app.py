@@ -784,88 +784,99 @@ def parecer(id):
         db.close()
 
     return redirect("/coordenacao")
-# ---------------- PROCESSO ALUNO ---------------
+# ---------------- PROCESSO ALUNO PDF ---------------
+from flask import make_response, redirect, session
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+import psycopg2.extras
+
+
+def safe(v):
+    return str(v) if v is not None else "-"
+
+
 @app.route("/processo/<int:id>/pdf")
-def baixar_processo(id):
+def gerar_pdf_processo(id):
     if "user_id" not in session:
         return redirect("/login")
 
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    # 🔒 só o dono pode baixar
     cur.execute("""
-        SELECT * FROM atas_saida
-        WHERE id=%s AND usuario_id=%s
-    """, (id, session["user_id"]))
+        SELECT *
+        FROM atas_saida
+        WHERE id = %s
+    """, (id,))
 
-    a = cur.fetchone()
+    ata = cur.fetchone()
 
-    if not a:
-        return "Sem permissão", 403
+    if not ata:
+        return "Processo não encontrado", 404
 
-    import io
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-
-    buffer = io.BytesIO()
+    buffer = BytesIO()
     doc = SimpleDocTemplate(buffer)
 
     styles = getSampleStyleSheet()
     elements = []
 
-    # 🔥 conteúdo
-    elements.append(Paragraph(f"<b>PROTOCOLO:</b> {a[0]}", styles["Title"]))
+    # 🔥 TÍTULO
+    elements.append(Paragraph("PROCESSO DO ALUNO", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    # 🔥 IDENTIFICAÇÃO
+    elements.append(Paragraph("Protocolo: " + safe(ata["numero_requerimento"]), styles["Normal"]))
+    elements.append(Paragraph("Aluno: " + safe(ata["aluno_nome"]), styles["Normal"]))
+    elements.append(Paragraph("CPF: " + safe(ata["cpf"]), styles["Normal"]))
+    elements.append(Paragraph("Email: " + safe(ata["email"]), styles["Normal"]))
+    elements.append(Paragraph("Telefone: " + safe(ata["telefone"]), styles["Normal"]))
     elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph(f"<b>Aluno:</b> {a[1]}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>CPF:</b> {a[2]}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Email:</b> {a[3]}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Telefone:</b> {a[4]}", styles["Normal"]))
-
+    # 🔥 DADOS ACADÊMICOS
+    elements.append(Paragraph("Curso: " + safe(ata["curso"]), styles["Normal"]))
+    elements.append(Paragraph("Turno: " + safe(ata["turno"]), styles["Normal"]))
+    elements.append(Paragraph("Projeto: " + safe(ata["projeto"]), styles["Normal"]))
+    elements.append(Paragraph("Município: " + safe(ata["municipio"]), styles["Normal"]))
     elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph(f"<b>Curso:</b> {a[5]}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Status:</b> {a[8]}", styles["Normal"]))
-
+    # 🔥 SOLICITAÇÃO
+    elements.append(Paragraph("Tipo: " + safe(ata["tipo"]), styles["Normal"]))
+    elements.append(Paragraph("Justificativa:", styles["Heading3"]))
+    elements.append(Paragraph(safe(ata["justificativa"]), styles["Normal"]))
     elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph("<b>Justificativa:</b>", styles["Heading3"]))
-    elements.append(Paragraph(a[6] or "-", styles["Normal"]))
-
+    # 🔥 SECRETARIA
+    elements.append(Paragraph("Atendimento da Secretaria:", styles["Heading3"]))
+    elements.append(Paragraph("Atendente: " + safe(ata["atendente"]), styles["Normal"]))
+    elements.append(Paragraph("Mensagem: " + safe(ata["mensagem"]), styles["Normal"]))
     elements.append(Spacer(1, 10))
 
-    if a[14]:
-        elements.append(Paragraph("<b>Mensagem da Secretaria:</b>", styles["Heading3"]))
-        elements.append(Paragraph(a[14], styles["Normal"]))
+    # 🔥 COORDENAÇÃO
+    elements.append(Paragraph("Análise da Coordenação:", styles["Heading3"]))
+    elements.append(Paragraph("Coordenador: " + safe(ata["coordenador"]), styles["Normal"]))
+    elements.append(Paragraph("Parecer: " + safe(ata["parecer"]), styles["Normal"]))
+    elements.append(Paragraph("Decisão: " + safe(ata["decisao"]), styles["Normal"]))
+    elements.append(Spacer(1, 10))
 
-    if a[13]:
-        elements.append(Spacer(1, 10))
-        elements.append(Paragraph("<b>Parecer da Coordenação:</b>", styles["Heading3"]))
-        elements.append(Paragraph(a[13], styles["Normal"]))
+    # 🔥 STATUS FINAL
+    elements.append(Paragraph("Status Final: " + safe(ata["status"]), styles["Heading2"]))
 
-    if a[15]:
-        elements.append(Paragraph(f"<b>Decisão:</b> {a[15]}", styles["Normal"]))
+    # 🔥 ANEXOS (links)
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("Anexos:", styles["Heading3"]))
+    elements.append(Paragraph("Aluno: " + safe(ata["anexo_url"]), styles["Normal"]))
+    elements.append(Paragraph("Secretaria: " + safe(ata["anexo_secretaria"]), styles["Normal"]))
+    elements.append(Paragraph("Coordenação: " + safe(ata["anexo_coord"]), styles["Normal"]))
 
-    elements.append(Spacer(1, 15))
-
-    # 🔗 anexos
-    if a[12]:
-        elements.append(Paragraph(f"Anexo aluno: {a[12]}", styles["Normal"]))
-
-    if a[22]:
-        elements.append(Paragraph(f"Anexo secretaria: {a[22]}", styles["Normal"]))
-
-    if a[21]:
-        elements.append(Paragraph(f"Anexo coordenação: {a[21]}", styles["Normal"]))
-
+    # 🔥 BUILD
     doc.build(elements)
 
     buffer.seek(0)
 
     response = make_response(buffer.read())
     response.headers["Content-Type"] = "application/pdf"
-    response.headers["Content-Disposition"] = f"attachment; filename=processo_{id}.pdf"
+    response.headers["Content-Disposition"] = f"inline; filename=processo_{id}.pdf"
 
     return response
 # ---------------- AUDITORIA ---------------
