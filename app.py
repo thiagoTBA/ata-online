@@ -203,7 +203,17 @@ def login():
 
             log_action(user[0], "LOGIN")
 
-            return redirect("/")
+            if user["role"] == "secretaria":
+                return redirect("/secretaria")
+
+            elif user["role"] == "coordenacao":
+                return redirect("/coordenacao")
+
+            elif user["role"] in ["admin", "unit_admin"]:
+                return redirect("/admin/users")
+
+            else:
+                return redirect("/")
 
     return render_template("login.html", error=error)
 
