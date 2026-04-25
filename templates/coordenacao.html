@@ -1,33 +1,67 @@
-<div class="header">
-  🎓 Painel Coordenação
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Coordenação</title>
 
-<div class="container">
+<style>
+body {
+  font-family: system-ui;
+  background: #020617;
+  color: white;
+}
 
-{% for a in atas %}
+.card {
+  background: #1e293b;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+}
+
+textarea {
+  width: 100%;
+  height: 80px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📌 Coordenação</h2>
+
+{% for ata in atas %}
 <div class="card">
 
-  <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
+  <p><b>Protocolo:</b> {{ ata.protocolo }}</p>
+  <p><b>Aluno:</b> {{ ata.aluno_nome }}</p>
+  <p><b>Tipo:</b> {{ tipos[ata.tipo] }}</p>
 
-  <div class="tag ok">📄 {{ a["protocolo"] }}</div>
-
-  <div class="tag p2">📌 {{ tipos.get(a["tipo"]) }}</div>
-
-  <br>
-
-  <form method="POST" action="/parecer/{{ a["id"] }}">
-
-    <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
+  {% if ata.status == "AGUARDANDO_COORD" %}
+  <form method="POST" action="/parecer/{{ ata.id }}">
+    
+    <textarea name="parecer" required></textarea>
 
     <select name="status">
-      <option value="DEFERIDO">🟢 Deferir</option>
-      <option value="INDEFERIDO">🔴 Indeferir</option>
+      <option value="DEFERIDO">Deferir</option>
+      <option value="INDEFERIDO">Indeferir</option>
     </select>
 
-    <button>Enviar decisão</button>
+    <button style="background: green;">Enviar</button>
   </form>
+
+  {% else %}
+    <span>✔ Processado</span>
+  {% endif %}
 
 </div>
 {% endfor %}
 
-</div>
+</body>
+</html>

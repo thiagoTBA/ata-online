@@ -90,10 +90,24 @@ TIPOS = {
     21: "Justificativa de Faltas",
     22: "Outros"
 }
+STATUS = {
+    "PENDENTE": "Pendente",
+    "EM_ATENDIMENTO": "Em atendimento",
+    "AGUARDANDO_COORD": "Coordenação",
+    "EM_ANALISE_COORD": "Em análise coord",
+    "RETORNADO_SECRETARIA": "Retornou",
+    "FINALIZADO": "Finalizado",
+    "DEFERIDO": "Deferido",
+    "INDEFERIDO": "Indeferido",
+    "TRAMITADO": "Tramitado"
+}
 # ---------------- AUTH ----------------
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    if "user_id" not in session:
+        return redirect("/login")
+
     error = None
 
     if request.method == "POST":
@@ -115,8 +129,7 @@ def register():
             if cur.fetchone():
                 error = "Usuário já existe"
             else:
-                cur.execute("SELECT id FROM unidades LIMIT 1")
-                unidade = cur.fetchone()
+                unidade_id = session.get("unidade_id")
 
                 cur.execute("""
                     INSERT INTO usuarios (username, password, unidade_id, role)
@@ -124,10 +137,12 @@ def register():
                 """, (
                     username,
                     generate_password_hash(password),
-                    unidade[0]
+                    unidade_id
                 ))
 
                 db.commit()
+                cur.close()
+                db.close()
                 return redirect("/login")
 
         cur.close()
@@ -135,6 +150,7 @@ def register():
 
     return render_template("register.html", error=error)
 
+# ---------------- LOGIN ----------------
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -260,7 +276,7 @@ def index():
         elif role == "unit_admin":
             cur.execute("""
                 SELECT * FROM atas_saida
-                WHERE unidade_id=%s
+                WHERE unidade_atual_id=%s
                 ORDER BY id DESC LIMIT 100
             """, (unidade_id,))
 
@@ -282,12 +298,13 @@ def index():
         a["protocolo"] = formatar_protocolo(a["id"])
 
     return render_template(
-        "index.html",
-        atas=atas,
-        tipos=TIPOS,
-        username=session.get("username"),
-        role=role
-    )
+    "index.html",
+    atas=atas,
+    tipos=TIPOS,
+    STATUS=STATUS,
+    username=session.get("username"),
+    role=role
+)
 
 
 # ---------------- SECRETARIA ----------------
@@ -301,36 +318,73 @@ def secretaria():
 
     cur.execute("""
         SELECT * FROM atas_saida
-        WHERE unidade_id=%s
+        WHERE unidade_atual_id=%s
         ORDER BY id DESC
     """, (session["unidade_id"],))
 
     atas = cur.fetchall()
 
+    # 🔥 protocolo formatado
     for a in atas:
         a["protocolo"] = formatar_protocolo(a["id"])
 
-    return render_template("secretaria.html", atas=atas, tipos=TIPOS, role=session["role"])
+    # 🔥 DASHBOARD (contadores)
+    stats = {
+        "PENDENTE": 0,
+        "EM_ATENDIMENTO": 0,
+        "AGUARDANDO_COORD": 0,
+        "RETORNADO_SECRETARIA": 0,
+        "FINALIZADO": 0
+    }
+
+    for a in atas:
+        status = a["status"]
+        stats[status] = stats.get(status, 0) + 1
+
+    cur.close()
+    db.close()
+
+    return render_template(
+        "secretaria.html",
+        atas=atas,
+        tipos=TIPOS,
+        STATUS=STATUS,
+        stats=stats,  # 🔥 AQUI que entra
+        role=session["role"]
+    )
+# ---------------- SEND ----------------
 
 @app.route("/finalizar/<int:id>", methods=["POST"])
 def finalizar(id):
     if session.get("role") not in ["admin", "secretaria"]:
         return "Sem permissão", 403
 
-
     db = get_db()
     cur = db.cursor()
 
-    log_action(session["user_id"], "FINALIZOU", f"id={id} | aluno={nome}")
-    aluno = cur.fetchone()
-    nome = aluno[0] if aluno else "desconhecido"
+    # 🔍 valida status
+    cur.execute("""
+        SELECT aluno_nome, status FROM atas_saida
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
 
+    row = cur.fetchone()
+    if not row:
+        return "Protocolo não encontrado", 404
+
+    nome, status = row
+
+    if status not in ["EM_ATENDIMENTO", "RETORNADO_SECRETARIA"]:
+        return "Não pode finalizar neste estado", 400
+
+    # ✅ update
     cur.execute("""
         UPDATE atas_saida
         SET status='FINALIZADO'
-        WHERE id=%s
-    """, (id,))
-    log_action(session["user_id"], "FINALIZOU", f"id={id}")
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    log_action(session["user_id"], "FINALIZOU", f"id={id} | aluno={nome}")
 
     db.commit()
     cur.close()
@@ -338,6 +392,47 @@ def finalizar(id):
 
     return redirect("/secretaria")
 
+# ---------------- TRANSMISSÃO ----------------
+@app.route("/tramitar/<int:id>", methods=["POST"])
+def tramitar(id):
+    if session.get("role") not in ["admin", "secretaria"]:
+        return "Sem permissão", 403
+
+    nova_unidade = request.form.get("unidade_id")
+
+    db = get_db()
+    cur = db.cursor()
+
+    # 🔍 valida protocolo + status
+    cur.execute("""
+        SELECT status FROM atas_saida
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    row = cur.fetchone()
+    if not row:
+        return "Protocolo não encontrado", 404
+
+    status = row[0]
+
+    if status != "EM_ATENDIMENTO":
+        return "Só pode tramitar protocolos em atendimento", 400
+
+    # ✅ update
+    cur.execute("""
+        UPDATE atas_saida
+        SET unidade_atual_id=%s,
+            status='AGUARDANDO_COORD'
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (nova_unidade, id, session["unidade_id"]))
+
+    log_action(session["user_id"], "TRAMITOU", f"id={id} -> unidade={nova_unidade}")
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    return redirect("/secretaria")
 # ---------------- COORDENAÇÃO ----------------
 @app.route("/coordenacao")
 def coordenacao():
@@ -349,7 +444,7 @@ def coordenacao():
 
     cur.execute("""
         SELECT * FROM atas_saida
-        WHERE unidade_id=%s
+        WHERE unidade_atual_id=%s
         AND status='AGUARDANDO_COORD'
         ORDER BY id DESC
     """, (session["unidade_id"],))
@@ -359,7 +454,13 @@ def coordenacao():
     for a in atas:
         a["protocolo"] = formatar_protocolo(a["id"])
 
-    return render_template("coordenacao.html", atas=atas, tipos=TIPOS, role=session["role"])
+    return render_template(
+    "coordenacao.html",
+    atas=atas,
+    tipos=TIPOS,
+    STATUS=STATUS,
+    role=session["role"]
+)
 # ---------------- ADD ----------------
 
 @app.route("/add", methods=["POST"])
@@ -405,29 +506,28 @@ def add():
         anexo_url = result["secure_url"]
 
     # 🔥 regra de fluxo
-    if tipo in [2,11,13,18,19,20,21,22]:
-        status = "AGUARDANDO_COORD"
-    else:
-        status = "EM_ATENDIMENTO"
+    status = "PENDENTE"
 
     db = get_db()
     cur = db.cursor()
 
     cur.execute("""
-        INSERT INTO atas_saida
-        (aluno_nome, cpf, email, telefone, curso,
-         tipo, justificativa, status,
-         anexo_url,
-         rg, sexo, turno, municipio, projeto,
-         usuario_id, unidade_id)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (
-        aluno_nome, cpf, email, telefone, curso,
-        tipo, justificativa, status,
-        anexo_url,
-        rg, sexo, turno, municipio, projeto,
-        session["user_id"], session["unidade_id"]
-    ))
+    INSERT INTO atas_saida
+    (aluno_nome, cpf, email, telefone, curso,
+     tipo, justificativa, status,
+     anexo_url,
+     rg, sexo, turno, municipio, projeto,
+     usuario_id, unidade_id,
+     unidade_origem_id, unidade_atual_id)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+""", (
+    aluno_nome, cpf, email, telefone, curso,
+    tipo, justificativa, status,
+    anexo_url,
+    rg, sexo, turno, municipio, projeto,
+    session["user_id"], session["unidade_id"],
+    session["unidade_id"], session["unidade_id"]
+))
 
     db.commit()
     cur.close()
@@ -435,67 +535,94 @@ def add():
 
     return redirect("/")
 
-# ---------------- SECRETARIA ----------
+# ---------------- ATENDI ----------
 @app.route("/atender/<int:id>", methods=["POST"])
 def atender(id):
     if "user_id" not in session:
         return redirect("/login")
 
-    # 🔒 PERMISSÃO
     if session.get("role") not in ["admin", "secretaria"]:
         return "Sem permissão", 403
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT aluno_nome FROM atas_saida WHERE id=%s", (id,))
-    nome = cur.fetchone()[0]
 
+    # 🔍 valida protocolo + status
+    cur.execute("""
+        SELECT aluno_nome, status FROM atas_saida
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    row = cur.fetchone()
+    if not row:
+        return "Protocolo não encontrado", 404
+
+    nome, status = row
+
+    if status != "PENDENTE":
+        return "Só é possível atender protocolos pendentes", 400
+
+    # ✅ update
     cur.execute("""
         UPDATE atas_saida
-        SET
-          atendente=%s,
-          data_atendimento=NOW(),
-          status='EM_ATENDIMENTO'
-        WHERE id=%s
+        SET atendente=%s,
+            data_atendimento=NOW(),
+            status='EM_ATENDIMENTO'
+        WHERE id=%s AND unidade_atual_id=%s
     """, (
         session["username"],
-        id
+        id,
+        session["unidade_id"]
     ))
+
     log_action(session["user_id"], "ATENDEU", f"id={id} | aluno={nome}")
+
     db.commit()
     cur.close()
     db.close()
 
-    return redirect("/")
+    return redirect("/secretaria")
 # ---------------- COORDENAÇÃO ----------------
 @app.route("/parecer/<int:id>", methods=["POST"])
 def parecer(id):
     if "user_id" not in session:
         return redirect("/login")
 
-    # 🔒 PERMISSÃO
     if session.get("role") not in ["admin", "coordenacao"]:
         return "Sem permissão", 403
 
     parecer = request.form["parecer"]
-    status = request.form["status"]
+    decisao = request.form["status"]
 
     db = get_db()
     cur = db.cursor()
 
+    # 🔍 valida status
+    cur.execute("""
+        SELECT status FROM atas_saida
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    row = cur.fetchone()
+    if not row:
+        return "Protocolo não encontrado", 404
+
+    if row[0] != "AGUARDANDO_COORD":
+        return "Protocolo não está na coordenação", 400
+
+    # ✅ update
     cur.execute("""
         UPDATE atas_saida
-        SET
-          parecer=%s,
-          coordenador=%s,
-          data_parecer=NOW(),
-          status=%s
-        WHERE id=%s
+        SET parecer=%s,
+            coordenador=%s,
+            data_parecer=NOW(),
+            status='RETORNADO_SECRETARIA'
+        WHERE id=%s AND unidade_atual_id=%s
     """, (
         parecer,
         session["username"],
-        status,
-        id
+        id,
+        session["unidade_id"]
     ))
 
     db.commit()
@@ -504,6 +631,7 @@ def parecer(id):
 
     return redirect("/")
 
+# ---------------- ENVIAR UNIDADES ----------------
 
 @app.route("/enviar_coord/<int:id>", methods=["POST"])
 def enviar_coord(id):
@@ -512,16 +640,30 @@ def enviar_coord(id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT aluno_nome FROM atas_saida WHERE id=%s", (id,))
-    aluno = cur.fetchone()
-    nome = aluno[0] if aluno else "desconhecido"
 
+    # 🔍 valida status
+    cur.execute("""
+        SELECT aluno_nome, status FROM atas_saida
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    row = cur.fetchone()
+    if not row:
+        return "Protocolo não encontrado", 404
+
+    nome, status = row
+
+    if status != "EM_ATENDIMENTO":
+        return "Só pode enviar para coord após atendimento", 400
+
+    # ✅ update
     cur.execute("""
         UPDATE atas_saida
         SET status='AGUARDANDO_COORD'
-        WHERE id=%s
-    """, (id,))
-    log_action(session["user_id"], "FINALIZOU", f"id={id} | aluno={nome}")
+        WHERE id=%s AND unidade_atual_id=%s
+    """, (id, session["unidade_id"]))
+
+    log_action(session["user_id"], "ENVIOU_COORD", f"id={id} | aluno={nome}")
 
     db.commit()
     cur.close()
@@ -637,7 +779,65 @@ def admin_users():
 
     return render_template("admin_users.html", users=users, unidades=unidades)
 
-    
+# ---------------- RESERT ADM ----------------
+@app.route("/admin/reset_password/<int:id>", methods=["POST"])
+def reset_password(id):
+    if not is_admin():
+        return "Sem permissão", 403
+
+    nova = gerar_senha()
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        UPDATE usuarios
+        SET password=%s
+        WHERE id=%s
+    """, (
+        generate_password_hash(nova),
+        id
+    ))
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    log_action(session["user_id"], "RESET_PASSWORD", f"user={id}")
+
+    return f"Nova senha: {nova}"
+
+# ---------------- TROCA SENHA USER ----------------
+@app.route("/change_password", methods=["POST"])
+def change_password():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    nova = request.form.get("nova")
+
+    if not nova or len(nova) < 4:
+        return "Senha inválida", 400
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        UPDATE usuarios
+        SET password=%s
+        WHERE id=%s
+    """, (
+        generate_password_hash(nova),
+        session["user_id"]
+    ))
+
+    db.commit()
+    cur.close()
+    db.close()
+
+    log_action(session["user_id"], "CHANGE_PASSWORD")
+
+    return redirect("/")
+  
 # ---------------- DELETE USER ----------------
 
 @app.route("/admin/delete_user/<int:id>", methods=["POST"])
