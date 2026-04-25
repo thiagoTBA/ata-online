@@ -445,7 +445,7 @@ def coordenacao():
     cur.execute("""
         SELECT * FROM atas_saida
         WHERE unidade_atual_id=%s
-        AND status='AGUARDANDO_COORD'
+        AND status IN ('AGUARDANDO_COORD','RETORNADO_SECRETARIA')
         ORDER BY id DESC
     """, (session["unidade_id"],))
 
@@ -582,7 +582,7 @@ def atender(id):
     db.close()
 
     return redirect("/secretaria")
-# ---------------- COORDENAÇÃO ----------------
+# ---------------- PARECER ----------------
 @app.route("/parecer/<int:id>", methods=["POST"])
 def parecer(id):
     if "user_id" not in session:
@@ -614,12 +614,14 @@ def parecer(id):
     cur.execute("""
         UPDATE atas_saida
         SET parecer=%s,
+            decisao=%s,
             coordenador=%s,
             data_parecer=NOW(),
             status='RETORNADO_SECRETARIA'
         WHERE id=%s AND unidade_atual_id=%s
     """, (
         parecer,
+        decisao,
         session["username"],
         id,
         session["unidade_id"]
@@ -631,6 +633,59 @@ def parecer(id):
 
     return redirect("/")
 
+# ---------------- admin supa ----------------
+@app.route("/admin/create_full_user", methods=["POST"])
+def create_full_user():
+    if session.get("role") not in ["admin", "unit_admin"]:
+        return "Sem permissão", 403
+
+    username = request.form.get("username")
+    nome = request.form.get("nome")
+    unidade_id = request.form.get("unidade_id")
+    role = request.form.get("role")
+
+    if not username or not unidade_id or not role:
+        return "Dados inválidos", 400
+
+    # 🔒 unit_admin só cria na própria unidade
+    if session["role"] == "unit_admin":
+        unidade_id = session["unidade_id"]
+
+        if role in ["admin", "unit_admin"]:
+            return "Sem permissão", 403
+
+    senha = gerar_senha()
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO usuarios (username, password, unidade_id, role)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            username,
+            generate_password_hash(senha),
+            unidade_id,
+            role
+        ))
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        return f"Erro: {e}"
+
+    finally:
+        cur.close()
+        db.close()
+
+    return f"""
+    <h3>Usuário criado</h3>
+    <p>Login: {username}</p>
+    <p>Senha: {senha}</p>
+    <a href="/admin/users">Voltar</a>
+    """
 # ---------------- ENVIAR UNIDADES ----------------
 
 @app.route("/enviar_coord/<int:id>", methods=["POST"])

@@ -29,6 +29,18 @@ button {
   border-radius: 6px;
   border: none;
 }
+
+.tag {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: inline-block;
+  margin-top: 5px;
+}
+
+.ok { background:#22c55e; color:white; }
+.no { background:#ef4444; color:white; }
+.p2 { background:#facc15; color:black; }
 </style>
 </head>
 
@@ -39,25 +51,59 @@ button {
 {% for ata in atas %}
 <div class="card">
 
-  <p><b>Protocolo:</b> {{ ata.protocolo }}</p>
-  <p><b>Aluno:</b> {{ ata.aluno_nome }}</p>
-  <p><b>Tipo:</b> {{ tipos[ata.tipo] }}</p>
+  <p><b>CPF:</b> {{ ata.cpf }}</p>
+  <p><b>Email:</b> {{ ata.email }}</p>
+  <p><b>Telefone:</b> {{ ata.telefone }}</p>
 
+  <p><b>Curso:</b> {{ ata.curso }}</p>
+  <p><b>Turno:</b> {{ ata.turno }}</p>
+  <p><b>Município:</b> {{ ata.municipio }}</p>
+
+  <p><b>Justificativa:</b></p>
+  <div class="tag p2">
+    {{ ata.justificativa }}
+  </div>
+
+  {% if ata.anexo_url %}
+    <div>
+      <a href="{{ ata.anexo_url }}" target="_blank">📎 Ver anexo</a>
+    </div>
+  {% endif %}
+
+  <!-- 🔥 DECISÃO (novo) -->
+  {% if ata.decisao %}
+    {% if ata.decisao == "DEFERIDO" %}
+      <div class="tag ok">🟢 Deferido</div>
+    {% elif ata.decisao == "INDEFERIDO" %}
+      <div class="tag no">🔴 Indeferido</div>
+    {% endif %}
+  {% endif %}
+
+  <!-- 🔥 PARECER (novo) -->
+  {% if ata.parecer %}
+    <div class="tag p2">
+      📝 {{ ata.parecer }}
+    </div>
+  {% endif %}
+
+  <!-- 🔥 AÇÕES -->
   {% if ata.status == "AGUARDANDO_COORD" %}
-  <form method="POST" action="/parecer/{{ ata.id }}">
-    
-    <textarea name="parecer" required></textarea>
 
-    <select name="status">
-      <option value="DEFERIDO">Deferir</option>
-      <option value="INDEFERIDO">Indeferir</option>
-    </select>
+    <form method="POST" action="/parecer/{{ ata.id }}">
+      <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
 
-    <button style="background: green;">Enviar</button>
-  </form>
+      <select name="status">
+        <option value="DEFERIDO">Deferir</option>
+        <option value="INDEFERIDO">Indeferir</option>
+      </select>
 
-  {% else %}
-    <span>✔ Processado</span>
+      <button style="background: green;">Enviar</button>
+    </form>
+
+  {% elif ata.status == "RETORNADO_SECRETARIA" %}
+
+    <div class="tag ok">✔ Já analisado</div>
+
   {% endif %}
 
 </div>

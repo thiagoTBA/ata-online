@@ -65,7 +65,6 @@ button {
 .p2 { background:#fde68a; color:#92400e; }
 .ok { background:#d1fae5; color:#065f46; }
 .no { background:#fee2e2; color:#991b1b; }
-
 </style>
 </head>
 
@@ -74,32 +73,32 @@ button {
 <div class="header">
   📄 protocolo.ia
   <span style="float:right">
+
     {% if role in ["secretaria","unit_admin","admin"] %}
-  <a href="/secretaria">🏢 Secretaria</a>
-{% endif %}
+      <a href="/secretaria">🏢 Secretaria</a>
+    {% endif %}
 
-{% if role in ["coordenacao","admin"] %}
-  <a href="/coordenacao">🎓 Coordenação</a>
-{% endif %}
+    {% if role in ["coordenacao","admin"] %}
+      <a href="/coordenacao">🎓 Coordenação</a>
+    {% endif %}
 
-  {% if role == "admin" %}
-    <a href="/admin/users" style="color:white; margin-right:10px;">👥 Usuários</a>
-    <a href="/admin/unidades" style="color:white; margin-right:10px;">🏢 Unidades</a>
-    <a href="/admin/logs" style="color:white; margin-right:10px;">📊 Logs</a>
-  {% endif %}
+    {% if role == "admin" %}
+      <a href="/admin/users">👥 Usuários</a>
+      <a href="/admin/unidades">🏢 Unidades</a>
+      <a href="/admin/logs">📊 Logs</a>
+    {% endif %}
 
-  {% if role == "unit_admin" %}
-    <a href="/admin/users" style="color:white; margin-right:10px;">👥 Usuários</a>
-  {% endif %}
+    {% if role == "unit_admin" %}
+      <a href="/admin/users">👥 Usuários</a>
+    {% endif %}
 
-  👤 {{ username }} |
-  <a href="/logout" style="color:white;">Sair</a>
+    👤 {{ username }} |
+    <a href="/logout">Sair</a>
 
-</span>
+  </span>
 </div>
 
 <div class="container">
-
 
 {% if session["role"] in ["admin","unit_admin","secretaria"] %}
 <div class="card">
@@ -111,16 +110,24 @@ button {
     <button>Criar acesso</button>
   </form>
 </div>
+<div class="card">
+  <h3>🔑 Trocar senha</h3>
+
+  <form method="POST" action="/change_password">
+    <input type="password" name="nova" placeholder="Nova senha" required>
+    <button>Atualizar</button>
+  </form>
+</div>
 {% endif %}
 
 <!-- 📌 NOVO REQUERIMENTO -->
 <div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data">
+<form id="form-requerimento" method="POST" action="/add" enctype="multipart/form-data">
 
   <input name="aluno_nome" placeholder="Nome do aluno" required>
-  <input name="cpf" placeholder="CPF">
-  <input name="email" placeholder="Email">
-  <input name="telefone" placeholder="Telefone">
+  <input name="cpf" id="cpf" placeholder="CPF" required>
+  <input name="email" id="email" type="email" placeholder="Email" required>
+  <input name="telefone" id="telefone" placeholder="Telefone" required>
   <input name="curso" placeholder="Curso">
   <input name="rg" placeholder="RG">
 
@@ -140,17 +147,12 @@ button {
   <input name="municipio" placeholder="Município / Unidade">
   <input name="projeto" placeholder="Projeto">
 
+  <!-- SELECT CORRETO -->
   <select name="tipo" required>
     <option value="">Tipo de solicitação</option>
-    <option value="1">Declaração</option>
-    <option value="2">Aproveitamento</option>
-    <option value="11">Trancamento</option>
-    <option value="13">Transferência</option>
-    <option value="18">Revisão</option>
-    <option value="19">Recurso</option>
-    <option value="20">2ª chamada</option>
-    <option value="21">Justificativa</option>
-    <option value="22">Outros</option>
+    {% for k, v in tipos.items() %}
+      <option value="{{ k }}">{{ v }}</option>
+    {% endfor %}
   </select>
 
   <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
@@ -165,49 +167,72 @@ button {
 {% for a in atas %}
 <div class="card">
 
-  <!-- Nome -->
   <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
 
-  <!-- Protocolo -->
   {% if a["protocolo"] %}
-    <div class="tag ok">
-      📄 {{ a["protocolo"] }}
-    </div>
+    <div class="tag ok">📄 {{ a["protocolo"] }}</div>
   {% endif %}
 
-  <!-- Tipo -->
   <div class="tag p2">
     📌 {{ tipos.get(a["tipo"], "Desconhecido") }}
   </div>
 
-  <!-- Data -->
   📅 Criado: {{ a["criado_em"] }}<br>
 
-  <!-- STATUS CORRIGIDO -->
-{% if a["status"] == "PENDENTE" %}
-  <div class="tag p1">🟡 Pendente</div>
+  {% if a["status"] == "PENDENTE" %}
+    <div class="tag p1">🟡 Pendente</div>
+  {% elif a["status"] == "EM_ATENDIMENTO" %}
+    <div class="tag p1">🟡 Em atendimento</div>
+  {% elif a["status"] == "AGUARDANDO_COORD" %}
+    <div class="tag p2">🟠 Na coordenação</div>
+  {% elif a["status"] == "RETORNADO_SECRETARIA" %}
+    <div class="tag p2">🔁 Retornou para secretaria</div>
+  {% elif a["status"] == "FINALIZADO" %}
+    <div class="tag ok">🟢 Finalizado</div>
+  {% endif %}
+  <!-- 🧭 TIMELINE -->
+<div style="margin-top:10px; font-size:13px">
 
-{% elif a["status"] == "EM_ATENDIMENTO" %}
-  <div class="tag p1">🟡 Em atendimento</div>
+  <div>📌 Criado</div>
 
-{% elif a["status"] == "AGUARDANDO_COORD" %}
-  <div class="tag p2">🟠 Na coordenação</div>
+  {% if a["status"] in ["EM_ATENDIMENTO","AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
+    <div>🟡 Atendido</div>
+  {% endif %}
 
-{% elif a["status"] == "RETORNADO_SECRETARIA" %}
-  <div class="tag p2">🔁 Retornou para secretaria</div>
+  {% if a["status"] in ["AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
+    <div>🟠 Enviado para coordenação</div>
+  {% endif %}
 
-{% elif a["status"] == "FINALIZADO" %}
-  <div class="tag ok">🟢 Finalizado</div>
+  {% if a["status"] in ["RETORNADO_SECRETARIA","FINALIZADO"] %}
+    <div>🔁 Retornou da coordenação</div>
+  {% endif %}
+
+  {% if a["status"] == "FINALIZADO" %}
+    <div>🟢 Finalizado</div>
+  {% endif %}
+
+</div>
+
+  <!-- RESULTADO DA COORD -->
+{% if a["decisao"] %}
+  
+  {% if a["decisao"] == "DEFERIDO" %}
+    <div class="tag ok">🟢 Deferido</div>
+  {% elif a["decisao"] == "INDEFERIDO" %}
+    <div class="tag no">🔴 Indeferido</div>
+  {% endif %}
 
 {% endif %}
 
-  <!-- ANEXO -->
+{% if a["parecer"] %}
+  <div class="tag p2">
+    📝 {{ a["parecer"] }}
+  </div>
+{% endif %}
+
   {% if a["anexo_url"] %}
-    <br>
     <div class="tag ok">
-      <a href="{{ a["anexo_url"] }}" target="_blank" style="text-decoration:none;color:inherit;">
-        📎 Ver anexo
-      </a>
+      <a href="{{ a["anexo_url"] }}" target="_blank">📎 Ver anexo</a>
     </div>
   {% endif %}
 
@@ -218,7 +243,7 @@ button {
     </form>
   {% endif %}
 
-  <!-- COORDENAÇÃO -->
+  <!-- COORD -->
   {% if session["role"] in ["admin","coordenacao"] and a["status"] == "AGUARDANDO_COORD" %}
     <form method="POST" action="/parecer/{{ a["id"] }}">
       <input name="parecer" placeholder="Parecer">
@@ -236,6 +261,67 @@ button {
 {% endfor %}
 
 </div>
+
+<script>
+document.getElementById("form-requerimento").addEventListener("submit", function(e) {
+
+  const cpf = document.getElementById("cpf").value;
+  const tel = document.getElementById("telefone").value;
+  const email = document.getElementById("email").value;
+
+  function validarCPF(cpf) {
+    cpf = cpf.replace(/\D/g, '');
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+    let soma = 0, resto;
+
+    for (let i = 1; i <= 9; i++)
+      soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.substring(9, 10))) return false;
+
+    soma = 0;
+    for (let i = 1; i <= 10; i++)
+      soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.substring(10, 11))) return false;
+
+    return true;
+  }
+
+  function validarTelefone(tel) {
+    tel = tel.replace(/\D/g, '');
+    return tel.length >= 10 && tel.length <= 11;
+  }
+
+  function validarEmail(email) {
+    return /\S+@\S+\.\S+/.test(email);
+  }
+
+  if (!validarCPF(cpf)) {
+    alert("CPF inválido");
+    e.preventDefault();
+    return;
+  }
+
+  if (!validarTelefone(tel)) {
+    alert("Telefone inválido");
+    e.preventDefault();
+    return;
+  }
+
+  if (!validarEmail(email)) {
+    alert("Email inválido");
+    e.preventDefault();
+    return;
+  }
+
+});
+</script>
 
 </body>
 </html>
