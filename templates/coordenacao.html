@@ -1,25 +1,78 @@
 {% extends "base.html" %}
 
-{% block title %}Secretaria{% endblock %}
+{% block title %}Coordenação{% endblock %}
 
 {% block content %}
 
-<h2>📊 Secretaria</h2>
+<h2>🎓 Coordenação</h2>
+
+<style>
+.cards {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+.card {
+  flex:1;
+  min-width:120px;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  font-weight:bold;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid #334155;
+  vertical-align:top;
+}
+
+th {
+  text-align:left;
+}
+
+td {
+  max-width:300px;
+}
+
+.box {
+  margin-top:8px;
+  padding:8px;
+  background:#1e293b;
+  border-radius:8px;
+  word-break: break-word;
+}
+
+textarea {
+  width:100%;
+  margin-top:5px;
+}
+
+button {
+  margin-top:5px;
+  width:100%;
+}
+</style>
 
 <div class="cards">
-  <div class="card PENDENTE">Pendentes<br>{{ stats.PENDENTE }}</div>
-  <div class="card EM_ATENDIMENTO">Atendimento<br>{{ stats.EM_ATENDIMENTO }}</div>
-  <div class="card AGUARDANDO_COORD">Coord<br>{{ stats.AGUARDANDO_COORD }}</div>
-  <div class="card RETORNADO_SECRETARIA">Retorno<br>{{ stats.RETORNADO_SECRETARIA }}</div>
-  <div class="card FINALIZADO">Finalizado<br>{{ stats.FINALIZADO }}</div>
+  <div class="card AGUARDANDO_COORD">Aguardando<br>{{ stats.AGUARDANDO_COORD }}</div>
+  <div class="card FINALIZADO">Finalizados<br>{{ stats.FINALIZADO }}</div>
 </div>
 
 <table>
 <tr>
-  <th>Protocolo</th>
+  <th style="width:120px;">Protocolo</th>
   <th>Aluno</th>
-  <th>Status</th>
-  <th>Ações</th>
+  <th style="width:120px;">Status</th>
+  <th style="width:250px;">Ações</th>
 </tr>
 
 {% for ata in atas %}
@@ -29,11 +82,12 @@
 
 <td>
   <b>{{ ata.aluno_nome }}</b><br>
+
   <div style="margin-top:5px; font-size:13px; color:#94a3b8;">
-  {% if ata.atendente %}
-    👨‍💼 Atendido por: {{ ata.atendente }}
-  {% endif %}
-</div>
+    {% if ata.atendente %}
+      👨‍💼 Atendido por: {{ ata.atendente }}
+    {% endif %}
+  </div>
 
   <small>
     📄 {{ ata.cpf }}<br>
@@ -47,50 +101,43 @@
     {{ ata.justificativa }}
   </div>
 
+  {% if ata.parecer %}
+    <div class="box">
+      📝 {{ ata.parecer }}
+    </div>
+  {% endif %}
+
   {% if ata.decisao %}
     <div style="margin-top:5px;">
       {{ '🟢 Deferido' if ata.decisao == 'DEFERIDO' else '🔴 Indeferido' }}
     </div>
   {% endif %}
 
-  {% if ata.parecer %}
-    <div class="box">
-      {{ ata.parecer }}
-    </div>
-  {% endif %}
 </td>
 
 <td>{{ STATUS[ata.status] }}</td>
 
 <td>
 
-{% if ata.status == "PENDENTE" %}
-<form method="POST" action="/atender/{{ ata.id }}">
-  <textarea name="mensagem" placeholder="Mensagem inicial"></textarea>
-  <button style="background: orange;">Atender</button>
+{% if ata.status == "AGUARDANDO_COORD" %}
+
+<form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
+  <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
+
+  <select name="status" required>
+    <option value="">Decisão</option>
+    <option value="DEFERIDO">Deferido</option>
+    <option value="INDEFERIDO">Indeferido</option>
+  </select>
+
+  <input type="file" name="anexo_coord">
+
+  <button style="background: purple;">Enviar Parecer</button>
 </form>
 
-{% elif ata.status in ["EM_ATENDIMENTO", "RETORNADO_SECRETARIA"] %}
+{% elif ata.status == "RETORNADO_SECRETARIA" %}
+<span>✔ Já analisado</span>
 
-<form method="POST" action="/secretaria/anexo/{{ ata.id }}" enctype="multipart/form-data">
-  <textarea name="mensagem" placeholder="Mensagem ao aluno"></textarea>
-  <input type="file" name="anexo_secretaria">
-  <button style="background:#2563eb;">Enviar resposta</button>
-</form>
-
-<form method="POST" action="/enviar_coord/{{ ata.id }}">
-  <button style="background: purple;">Enviar Coord</button>
-</form>
-
-<form method="POST" action="/finalizar/{{ ata.id }}">
-  <button style="background: green;">Finalizar</button>
-</form>
-
-{% elif ata.status == "AGUARDANDO_COORD" %}
-<span>Na coordenação</span>
-
-{% elif ata.status == "FINALIZADO" %}
-<span>✔ Finalizado</span>
 {% endif %}
 
 {% if ata.anexo_url %}

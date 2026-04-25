@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ATA Online</title>
 
@@ -11,86 +10,71 @@
 body {
   margin:0;
   font-family: system-ui;
-  background:#020617;
-  color:white;
+  background:#f2f3f5;
 }
 
 .header {
-  background:#020617;
-  padding:12px 20px;
-  border-bottom:1px solid #334155;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.header a {
-  color:#60a5fa;
-  text-decoration:none;
-  margin-left:10px;
+  background:#111827;
+  color:white;
+  padding:15px;
+  font-weight:bold;
 }
 
 .container {
-  max-width:800px;
+  max-width:600px;
   margin:auto;
-  padding:20px;
+  padding:15px;
 }
 
 .card {
-  background:#1e293b;
+  background:white;
   padding:15px;
-  margin-bottom:15px;
-  border-radius:12px;
+  margin-bottom:12px;
+  border-radius:14px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
 }
 
 input, textarea, select {
   width:100%;
-  padding:10px;
+  padding:12px;
   margin-top:8px;
-  border-radius:8px;
-  border:none;
+  border-radius:10px;
+  border:1px solid #ddd;
 }
 
 button {
   width:100%;
-  padding:10px;
+  padding:12px;
   margin-top:10px;
-  border-radius:8px;
-  border:none;
   background:#2563eb;
   color:white;
-  cursor:pointer;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
 }
 
 .tag {
-  display:inline-block;
   padding:5px 10px;
   border-radius:8px;
   font-size:12px;
+  display:inline-block;
   margin-top:5px;
 }
 
 .p1 { background:#fef3c7; color:#b45309; }
 .p2 { background:#fde68a; color:#92400e; }
-.ok { background:#22c55e; color:white; }
-.no { background:#ef4444; color:white; }
-
-/* 🔥 evita quebrar layout */
-div, td {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
+.ok { background:#d1fae5; color:#065f46; }
+.no { background:#fee2e2; color:#991b1b; }
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div>📊 ATA Online</div>
+  📄 protocolo.ia
+  <span style="float:right">
 
-  <div>
-    {% if role in ["secretaria","admin","unit_admin"] %}
+    {% if role in ["secretaria","unit_admin","admin"] %}
       <a href="/secretaria">🏢 Secretaria</a>
     {% endif %}
 
@@ -100,67 +84,123 @@ div, td {
 
     {% if role == "admin" %}
       <a href="/admin/users">👥 Usuários</a>
+      <a href="/admin/unidades">🏢 Unidades</a>
+      <a href="/admin/logs">📊 Logs</a>
     {% endif %}
 
-    👤 {{ username }}
+    {% if role == "unit_admin" %}
+      <a href="/admin/users">👥 Usuários</a>
+    {% endif %}
+
+    👤 {{ username }} |
     <a href="/logout">Sair</a>
-  </div>
+
+  </span>
 </div>
 
 <div class="container">
 
-<!-- FORM -->
+{% if session["role"] in ["admin","unit_admin","secretaria"] %}
 <div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data">
+  <h3>➕ Cadastrar Aluno</h3>
+
+  <form method="POST" action="/admin/create_user">
+    <input name="username" placeholder="Nome do aluno" required>
+    <input name="cpf" placeholder="CPF (login)" required>
+    <button>Criar acesso</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>🔑 Trocar senha</h3>
+
+  <form method="POST" action="/change_password">
+    <input type="password" name="nova" placeholder="Nova senha" required>
+    <button>Atualizar</button>
+  </form>
+</div>
+{% endif %}
+
+<!-- 📌 NOVO REQUERIMENTO -->
+<div class="card">
+<form id="form-requerimento" method="POST" action="/add" enctype="multipart/form-data">
 
   <input name="aluno_nome" placeholder="Nome do aluno" required>
-  <input name="cpf" placeholder="CPF" required>
-  <input name="email" type="email" placeholder="Email" required>
-  <input name="telefone" placeholder="Telefone" required>
+  <input name="cpf" id="cpf" placeholder="CPF" required>
+  <input name="email" id="email" type="email" placeholder="Email" required>
+  <input name="telefone" id="telefone" placeholder="Telefone" required>
+  <input name="curso" placeholder="Curso">
+  <input name="rg" placeholder="RG">
+
+  <select name="sexo">
+    <option value="">Sexo</option>
+    <option value="M">Masculino</option>
+    <option value="F">Feminino</option>
+  </select>
+
+  <select name="turno">
+    <option value="">Turno</option>
+    <option value="manha">Manhã</option>
+    <option value="tarde">Tarde</option>
+    <option value="noite">Noite</option>
+  </select>
+
+  <input name="municipio" placeholder="Município / Unidade">
+  <input name="projeto" placeholder="Projeto">
 
   <select name="tipo" required>
-    <option value="">Tipo</option>
+    <option value="">Tipo de solicitação</option>
     {% for k, v in tipos.items() %}
       <option value="{{ k }}">{{ v }}</option>
     {% endfor %}
   </select>
 
+  <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
+
   <textarea name="justificativa" placeholder="Justificativa"></textarea>
 
-  <button>Criar</button>
+  <button>Criar Requerimento</button>
 </form>
 </div>
 
-<!-- LISTA -->
+<!-- 📋 LISTA -->
 {% for a in atas %}
 <div class="card">
 
-  <b>{{ a["aluno_nome"] }}</b><br>
+  <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
 
-  <small>
-    📄 {{ a["cpf"] }}<br>
-    📞 {{ a["telefone"] }}<br>
-    🎓 {{ a["curso"] }} | {{ a["turno"] }}<br>
-    📍 {{ a["municipio"] }}
-  </small>
-
-  <br>
-
-  <b>Protocolo:</b> {{ a["protocolo"] }}
-
-  <br><br>
-
-  <!-- STATUS -->
-  {% if a["status"] == "FINALIZADO" %}
-    <div class="tag ok">✔ Finalizado</div>
-  {% else %}
-    <div class="tag p1">{{ STATUS[a["status"]] }}</div>
+  {% if a["protocolo"] %}
+    <div class="tag ok">📄 {{ a["protocolo"] }}</div>
   {% endif %}
 
-  <!-- 🔥 BOTÃO PDF (CORRETO) -->
+  {% if a["anexo_secretaria"] %}
+    <div class="tag ok">
+      <a href="{{ a["anexo_secretaria"] }}" target="_blank">📎 Secretaria</a>
+    </div>
+  {% endif %}
+
+  <div class="tag p2">
+    📌 {{ tipos.get(a["tipo"], "Desconhecido") }}
+  </div>
+
+  📅 Criado: {{ a["criado_em"] }}<br>
+
+  {% if a["status"] == "PENDENTE" %}
+    <div class="tag p1">🟡 Pendente</div>
+  {% elif a["status"] == "EM_ATENDIMENTO" %}
+    <div class="tag p1">🟡 Em atendimento</div>
+  {% elif a["status"] == "AGUARDANDO_COORD" %}
+    <div class="tag p2">🟠 Na coordenação</div>
+  {% elif a["status"] == "RETORNADO_SECRETARIA" %}
+    <div class="tag p2">🔁 Retornou para secretaria</div>
+  {% elif a["status"] == "FINALIZADO" %}
+    <div class="tag ok">🟢 Finalizado</div>
+  {% endif %}
+
+  <!-- PDF -->
   {% if a["status"] == "FINALIZADO" %}
-    <div style="margin-top:10px;">
-      <a href="/processo/{{ a['id'] }}/pdf" target="_blank" style="color:#60a5fa; font-weight:bold;">
+    <div style="margin-top:8px;">
+      <a href="/processo/{{ a['id'] }}/pdf" target="_blank" style="color:#2563eb; font-weight:bold;">
         📄 Baixar Processo Completo
       </a>
     </div>
@@ -173,11 +213,55 @@ div, td {
     </div>
   {% endif %}
 
-  <!-- JUSTIFICATIVA -->
-  <div style="margin-top:10px;">
-    <b>Justificativa:</b><br>
-    {{ a["justificativa"] }}
+  <!-- TIMELINE -->
+  <div style="margin-top:10px; font-size:13px">
+
+    <div>📌 Criado</div>
+
+    {% if a["status"] in ["EM_ATENDIMENTO","AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
+      <div>🟡 Atendido</div>
+    {% endif %}
+
+    {% if a["status"] in ["AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
+      <div>🟠 Enviado para coordenação</div>
+    {% endif %}
+
+    {% if a["status"] in ["RETORNADO_SECRETARIA","FINALIZADO"] %}
+      <div>🔁 Retornou da coordenação</div>
+    {% endif %}
+
+    {% if a["status"] == "FINALIZADO" %}
+      <div>🟢 Finalizado</div>
+    {% endif %}
+
   </div>
+
+  <!-- RESULTADO -->
+  {% if a["decisao"] %}
+    {% if a["decisao"] == "DEFERIDO" %}
+      <div class="tag ok">🟢 Deferido</div>
+    {% else %}
+      <div class="tag no">🔴 Indeferido</div>
+    {% endif %}
+  {% endif %}
+
+  {% if a["parecer"] %}
+    <div class="tag p2">
+      📝 {{ a["parecer"] }}
+    </div>
+  {% endif %}
+
+  {% if a["anexo_url"] %}
+    <div class="tag ok">
+      <a href="{{ a["anexo_url"] }}" target="_blank">📎 Ver anexo</a>
+    </div>
+  {% endif %}
+
+  {% if session["role"] in ["admin","secretaria"] and a["status"] == "PENDENTE" %}
+    <form method="POST" action="/atender/{{ a["id"] }}">
+      <button>Atender</button>
+    </form>
+  {% endif %}
 
 </div>
 {% endfor %}
