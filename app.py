@@ -503,6 +503,7 @@ def coordenacao():
     db = get_db()
     cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    # 🔥 LISTA PRINCIPAL
     cur.execute("""
         SELECT * FROM atas_saida
         WHERE unidade_atual_id=%s
@@ -515,13 +516,36 @@ def coordenacao():
     for a in atas:
         a["protocolo"] = formatar_protocolo(a["id"])
 
+    # 🔥 STATS (CORREÇÃO DO ERRO)
+    cur.execute("""
+        SELECT status, COUNT(*) as total
+        FROM atas_saida
+        WHERE unidade_atual_id=%s
+        GROUP BY status
+    """, (session["unidade_id"],))
+
+    stats = {
+        "PENDENTE": 0,
+        "EM_ATENDIMENTO": 0,
+        "AGUARDANDO_COORD": 0,
+        "RETORNADO_SECRETARIA": 0,
+        "FINALIZADO": 0
+    }
+
+    for row in cur.fetchall():
+        stats[row["status"]] = row["total"]
+
+    cur.close()
+    db.close()
+
     return render_template(
-    "coordenacao.html",
-    atas=atas,
-    tipos=TIPOS,
-    STATUS=STATUS,
-    role=session["role"]
-)
+        "coordenacao.html",
+        atas=atas,
+        tipos=TIPOS,
+        STATUS=STATUS,
+        stats=stats,  # 🔥 ESSA LINHA RESOLVE O ERRO
+        role=session["role"]
+    )
 # ---------------- ADD ----------------
 
 @app.route("/add", methods=["POST"])
