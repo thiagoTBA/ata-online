@@ -63,10 +63,15 @@ button {
 
 .toggle {
   position:absolute;
-  right:15px;
+  right:12px;
   top:50%;
   transform: translateY(-50%);
   cursor:pointer;
+}
+
+input {
+  width:100%;
+  box-sizing: border-box;
 }
 </style>
 </head>
@@ -83,8 +88,8 @@ button {
   <form method="POST">
     <input name="username" placeholder="Usuário" required>
 
-    <div style="position:relative;">
-      <input id="password" name="password" type="password" placeholder="Senha" required style="padding-right:40px;">
+    <div style="position:relative; width:100%;">
+      <input id="password" name="password" type="password" placeholder="Senha" required style="padding-right:45px;">
       <span class="toggle" onclick="togglePassword()">👁️</span>
     </div>
 
