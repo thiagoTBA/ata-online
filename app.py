@@ -202,7 +202,7 @@ def login():
             login_tentativas[ip] = {"count": 0, "time": datetime.now()}
 
             log_action(user[0], "LOGIN")
-
+            role = user[5]
             if user["role"] == "secretaria":
                 return redirect("/secretaria")
 
