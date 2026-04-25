@@ -21,6 +21,9 @@ body {
 textarea {
   width: 100%;
   height: 80px;
+  border-radius:6px;
+  border:none;
+  padding:8px;
 }
 
 button {
@@ -28,25 +31,36 @@ button {
   padding: 6px;
   border-radius: 6px;
   border: none;
+  cursor:pointer;
 }
 
 .tag {
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: 8px;
   font-size: 12px;
   display: inline-block;
   margin-top: 5px;
 }
 
-.ok { background:#22c55e; color:white; }
-.no { background:#ef4444; color:white; }
+.ok { background:#22c55e; }
+.no { background:#ef4444; }
 .p2 { background:#facc15; color:black; }
+
+.box {
+  background:#0f172a;
+  padding:10px;
+  border-radius:6px;
+  margin-top:6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 </style>
 </head>
 
 <body>
 
 <h2>📌 Coordenação</h2>
+
 <div style="margin-bottom:10px;">
   <a href="/">🏠 Início</a> |
   <a href="/secretaria">🏢 Secretaria</a> |
@@ -56,61 +70,53 @@ button {
 {% for ata in atas %}
 <div class="card">
 
-  <p><b>CPF:</b> {{ ata.cpf }}</p>
-  <p><b>Email:</b> {{ ata.email }}</p>
-  <p><b>Telefone:</b> {{ ata.telefone }}</p>
+  <b>{{ ata.aluno_nome }}</b><br>
 
-  <p><b>Curso:</b> {{ ata.curso }}</p>
-  <p><b>Turno:</b> {{ ata.turno }}</p>
-  <p><b>Município:</b> {{ ata.municipio }}</p>
+  <small>
+    📄 CPF: {{ ata.cpf }}<br>
+    📧 {{ ata.email }}<br>
+    📞 {{ ata.telefone }}<br>
+    🎓 {{ ata.curso }} | {{ ata.turno }}<br>
+    📍 {{ ata.municipio }}
+  </small>
 
-  <p><b>Justificativa:</b></p>
-  <div class="tag p2">
+  <div class="box">
+    <b>📝 Justificativa:</b><br>
     {{ ata.justificativa }}
   </div>
 
   {% if ata.anexo_url %}
-    <div>
-      <a href="{{ ata.anexo_url }}" target="_blank">📎 Ver anexo</a>
-    </div>
+    <div><a href="{{ ata.anexo_url }}" target="_blank">📎 Anexo do aluno</a></div>
   {% endif %}
 
-  <!-- 🔥 DECISÃO (novo) -->
   {% if ata.decisao %}
-    {% if ata.decisao == "DEFERIDO" %}
-      <div class="tag ok">🟢 Deferido</div>
-    {% elif ata.decisao == "INDEFERIDO" %}
-      <div class="tag no">🔴 Indeferido</div>
-    {% endif %}
-  {% endif %}
-
-  <!-- 🔥 PARECER (novo) -->
-  {% if ata.parecer %}
-    <div class="tag p2">
-      📝 {{ ata.parecer }}
+    <div class="tag {{ 'ok' if ata.decisao == 'DEFERIDO' else 'no' }}">
+      {{ ata.decisao }}
     </div>
   {% endif %}
 
-  <!-- 🔥 AÇÕES -->
+  {% if ata.parecer %}
+    <div class="box">
+      <b>📝 Parecer:</b><br>
+      {{ ata.parecer }}
+    </div>
+  {% endif %}
+
   {% if ata.status == "AGUARDANDO_COORD" %}
+  <form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
+    <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
 
-    <form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
-  <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
+    <select name="status">
+      <option value="DEFERIDO">Deferir</option>
+      <option value="INDEFERIDO">Indeferir</option>
+    </select>
 
-  <select name="status">
-    <option value="DEFERIDO">Deferir</option>
-    <option value="INDEFERIDO">Indeferir</option>
-  </select>
+    <input type="file" name="anexo_coord">
 
-  <input type="file" name="anexo_coord">
-
-  <button style="background: green;">Enviar</button>
-</form>
-
-  {% elif ata.status == "RETORNADO_SECRETARIA" %}
-
+    <button style="background: green;">Enviar</button>
+  </form>
+  {% else %}
     <div class="tag ok">✔ Já analisado</div>
-
   {% endif %}
 
 </div>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, make_response
 import os
 from datetime import datetime, timedelta
 import json
@@ -12,6 +12,14 @@ import cloudinary
 import cloudinary.uploader
 import random
 import string
+from flask import make_response
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from datetime import datetime
+import io
+
 
 # ---------------- CLOUDINARY ----------------
 cloudinary.config(
@@ -828,6 +836,203 @@ def logs_unidade():
     db.close()
 
     return render_template("logs_unidade.html", logs=logs)
+# ---------------- LOG ADM GLOBBAL ---------------
+@app.route("/admin/logs")
+def logs_admin():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if session.get("role") != "admin":
+        return "Sem permissão", 403
+
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        SELECT l.acao, l.detalhes, l.criado_em, u.username, un.nome
+        FROM logs l
+        LEFT JOIN usuarios u ON u.id = l.user_id
+        LEFT JOIN unidades un ON un.id = u.unidade_id
+        ORDER BY l.criado_em DESC
+        LIMIT 300
+    """)
+
+    logs = [
+        {
+            "acao": r[0],
+            "detalhes": r[1],
+            "criado_em": r[2],
+            "username": r[3],
+            "unidade": r[4] or "Sem unidade"
+        }
+        for r in cur.fetchall()
+    ]
+
+    cur.close()
+    db.close()
+
+    return render_template("logs_admin.html", logs=logs)
+# ---------------- protocolos ---------------
+@app.route("/admin/protocolos")
+def protocolos_unidade():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if session.get("role") not in ["admin", "unit_admin"]:
+        return "Sem permissão", 403
+
+    db = get_db()
+    cur = db.cursor()
+
+    if session["role"] == "admin":
+        cur.execute("SELECT * FROM atas_saida ORDER BY criado_em DESC")
+    else:
+        cur.execute("""
+            SELECT * FROM atas_saida
+            WHERE unidade_id = %s
+            ORDER BY criado_em DESC
+        """, (session["unidade_id"],))
+
+    atas = cur.fetchall()
+
+    cur.close()
+    db.close()
+
+    return render_template("protocolos.html", atas=atas)
+# ---------------- gerar PDF ---------------
+
+
+def header_footer(canvas, doc):
+    canvas.saveState()
+
+    # 🔥 Cabeçalho
+    canvas.setFont("Helvetica-Bold", 10)
+    canvas.drawString(2 * cm, 28 * cm, "SISTEMA ATA ONLINE")
+
+    canvas.setFont("Helvetica", 8)
+    canvas.drawString(2 * cm, 27.5 * cm, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+    # 🔥 Rodapé
+    canvas.setFont("Helvetica", 8)
+    canvas.drawString(2 * cm, 1.5 * cm, f"Página {doc.page}")
+
+    canvas.restoreState()
+
+
+@app.route("/admin/protocolos/pdf", methods=["POST"])
+def gerar_pdf_protocolos():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    ids = request.form.getlist("ids")
+    if not ids:
+        return "Nenhum protocolo selecionado"
+
+    db = get_db()
+    cur = db.cursor()
+
+    query = f"""
+        SELECT a.*, u.nome
+        FROM atas_saida a
+        LEFT JOIN unidades u ON u.id = a.unidade_id
+        WHERE a.id IN ({','.join(['%s'] * len(ids))})
+        ORDER BY a.criado_em DESC
+    """
+    cur.execute(query, ids)
+    dados = cur.fetchall()
+
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=3 * cm,
+        bottomMargin=2 * cm
+    )
+
+    styles = getSampleStyleSheet()
+
+    titulo = ParagraphStyle(
+        "Titulo",
+        parent=styles["Heading1"],
+        alignment=1,
+        spaceAfter=15
+    )
+
+    normal = styles["Normal"]
+
+    caixa = ParagraphStyle(
+        "Caixa",
+        parent=styles["Normal"],
+        backColor="#f3f4f6",
+        borderPadding=6,
+        spaceAfter=10
+    )
+
+    elements = []
+
+    for i, a in enumerate(dados):
+
+        # 🔥 Título do protocolo
+        elements.append(Paragraph(f"PROTOCOLO Nº {a[0]}", titulo))
+
+        elements.append(Paragraph(f"<b>Unidade:</b> {a[-1] or 'N/A'}", normal))
+        elements.append(Spacer(1, 10))
+
+        # 🔥 Dados do aluno
+        elements.append(Paragraph("<b>DADOS DO ALUNO</b>", styles["Heading3"]))
+        elements.append(Paragraph(f"Nome: {a[1]}", normal))
+        elements.append(Paragraph(f"CPF: {a[2]}", normal))
+        elements.append(Paragraph(f"Email: {a[3]}", normal))
+        elements.append(Paragraph(f"Telefone: {a[4]}", normal))
+
+        elements.append(Spacer(1, 10))
+
+        # 🔥 Dados acadêmicos
+        elements.append(Paragraph("<b>DADOS ACADÊMICOS</b>", styles["Heading3"]))
+        elements.append(Paragraph(f"Curso: {a[5]}", normal))
+        elements.append(Paragraph(f"Turno: {a[16]}", normal))
+        elements.append(Paragraph(f"Município: {a[18]}", normal))
+
+        elements.append(Spacer(1, 10))
+
+        # 🔥 Justificativa
+        elements.append(Paragraph("<b>JUSTIFICATIVA</b>", styles["Heading3"]))
+        elements.append(Paragraph(a[6] or "-", caixa))
+
+        # 🔥 Status
+        elements.append(Paragraph(f"<b>Status:</b> {a[8]}", normal))
+
+        if a[15]:
+            elements.append(Paragraph(f"<b>Decisão:</b> {a[15]}", normal))
+
+        if a[13]:
+            elements.append(Spacer(1, 5))
+            elements.append(Paragraph("<b>PARECER DA COORDENAÇÃO</b>", styles["Heading3"]))
+            elements.append(Paragraph(a[13], caixa))
+
+        elements.append(Spacer(1, 30))
+
+        # 🔥 Assinatura
+        elements.append(Paragraph("______________________________", normal))
+        elements.append(Paragraph("Responsável", normal))
+
+        # 🔥 quebra de página
+        if i < len(dados) - 1:
+            elements.append(PageBreak())
+
+    doc.build(elements, onFirstPage=header_footer, onLaterPages=header_footer)
+
+    buffer.seek(0)
+
+    response = make_response(buffer.read())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = "attachment; filename=protocolos_oficial.pdf"
+
+    return response
+
 # ---------------- ANEXO ---------------
 @app.route("/coord_tramitar/<int:id>", methods=["POST"])
 def coord_tramitar(id):

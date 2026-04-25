@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Logs Gerais</title>
+
+<style>
+body {
+  font-family: system-ui;
+  background:#020617;
+  color:white;
+}
+
+.container {
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:10px;
+}
+
+.tag {
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  display:inline-block;
+  margin-left:5px;
+}
+
+.login { background:#22c55e; }
+.acao { background:#3b82f6; }
+.erro { background:#ef4444; }
+
+small {
+  color:#94a3b8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🌐 Logs Gerais (Admin)</h2>
+
+<div style="margin-bottom:10px;">
+  <a href="/">🏠 Início</a> |
+  <a href="/admin/logs_unidade">🏢 Logs Unidade</a>
+</div>
+
+{% for log in logs %}
+<div class="card">
+
+  <b>👤 {{ log.username or "Sistema" }}</b>
+  <span class="tag acao">{{ log.acao }}</span>
+
+  <div style="margin-top:5px;">
+    🏢 {{ log.unidade }}
+  </div>
+
+  <div style="margin-top:5px;">
+    📄 {{ log.detalhes }}
+  </div>
+
+  <small>⏱️ {{ log.criado_em }}</small>
+
+</div>
+{% endfor %}
+
+{% if not logs %}
+  <p>Nenhum log encontrado.</p>
+{% endif %}
+
+</div>
+
+</body>
+</html>

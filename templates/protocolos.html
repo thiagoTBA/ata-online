@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Protocolos</title>
+
+<style>
+body { font-family: system-ui; background:#020617; color:white; }
+table { width:100%; border-collapse:collapse; background:#1e293b; }
+th, td { padding:10px; border-bottom:1px solid #334155; }
+button { padding:6px 10px; margin:5px; }
+</style>
+</head>
+
+<body>
+
+<h2>📂 Protocolos da Unidade</h2>
+
+<form method="POST" action="/admin/protocolos/pdf">
+
+<button>📄 Exportar Selecionados</button>
+
+<table>
+<tr>
+  <th></th>
+  <th>ID</th>
+  <th>Aluno</th>
+  <th>Status</th>
+  <th>Ação</th>
+</tr>
+
+{% for a in atas %}
+<tr>
+
+<td>
+  <input type="checkbox" name="ids" value="{{ a.id }}">
+</td>
+
+<td>{{ a.id }}</td>
+<td>{{ a.aluno_nome }}</td>
+<td>{{ a.status }}</td>
+
+<td>
+  <button formaction="/admin/protocolos/pdf" formmethod="POST" name="ids" value="{{ a.id }}">
+    Exportar
+  </button>
+</td>
+
+</tr>
+{% endfor %}
+</table>
+
+</form>
+
+<br>
+
+<form method="POST" action="/admin/protocolos/pdf">
+  {% for a in atas %}
+    <input type="hidden" name="ids" value="{{ a.id }}">
+  {% endfor %}
+  <button>📦 Exportar TODOS</button>
+</form>
+
+</body>
+</html>
