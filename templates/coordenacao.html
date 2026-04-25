@@ -1,138 +1,114 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Coordenação</title>
+{% extends "base.html" %}
 
-<style>
-body {
-  font-family: system-ui;
-  background: #020617;
-  color: white;
-}
+{% block title %}Secretaria{% endblock %}
 
-.card {
-  background: #1e293b;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-}
+{% block content %}
 
-textarea {
-  width: 100%;
-  height: 80px;
-  border-radius:6px;
-  border:none;
-  padding:8px;
-}
+<h2>📊 Secretaria</h2>
 
-button {
-  margin-top: 10px;
-  padding: 6px;
-  border-radius: 6px;
-  border: none;
-  cursor:pointer;
-}
-
-.tag {
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  display: inline-block;
-  margin-top: 5px;
-}
-
-.ok { background:#22c55e; }
-.no { background:#ef4444; }
-.p2 { background:#facc15; color:black; }
-
-.box {
-  background:#0f172a;
-  padding:10px;
-  border-radius:6px;
-  margin-top:6px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-</style>
-</head>
-
-<body>
-
-<h2>📌 Coordenação</h2>
-<div style="
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  background:#1e293b;
-  padding:10px 15px;
-  border-radius:10px;
-  margin-bottom:15px;
-">
-  <div>👤 {{ session["username"] }}</div>
-  <a href="/logout" style="color:#60a5fa; text-decoration:none;">Sair</a>
+<div class="cards">
+  <div class="card PENDENTE">Pendentes<br>{{ stats.PENDENTE }}</div>
+  <div class="card EM_ATENDIMENTO">Atendimento<br>{{ stats.EM_ATENDIMENTO }}</div>
+  <div class="card AGUARDANDO_COORD">Coord<br>{{ stats.AGUARDANDO_COORD }}</div>
+  <div class="card RETORNADO_SECRETARIA">Retorno<br>{{ stats.RETORNADO_SECRETARIA }}</div>
+  <div class="card FINALIZADO">Finalizado<br>{{ stats.FINALIZADO }}</div>
 </div>
 
-<div style="margin-bottom:10px;">
-  <a href="/">🏠 Início</a> |
-  <a href="/secretaria">🏢 Secretaria</a> |
-  <a href="/coordenacao">🎓 Coordenação</a>
-</div>
+<table>
+<tr>
+  <th>Protocolo</th>
+  <th>Aluno</th>
+  <th>Status</th>
+  <th>Ações</th>
+</tr>
 
 {% for ata in atas %}
-<div class="card">
+<tr>
 
+<td>{{ ata.protocolo }}</td>
+
+<td>
   <b>{{ ata.aluno_nome }}</b><br>
+  <div style="margin-top:5px; font-size:13px; color:#94a3b8;">
+  {% if ata.atendente %}
+    👨‍💼 Atendido por: {{ ata.atendente }}
+  {% endif %}
+</div>
 
   <small>
-    📄 CPF: {{ ata.cpf }}<br>
-    📧 {{ ata.email }}<br>
+    📄 {{ ata.cpf }}<br>
     📞 {{ ata.telefone }}<br>
     🎓 {{ ata.curso }} | {{ ata.turno }}<br>
     📍 {{ ata.municipio }}
   </small>
 
   <div class="box">
-    <b>📝 Justificativa:</b><br>
+    <b>Justificativa:</b><br>
     {{ ata.justificativa }}
   </div>
 
-  {% if ata.anexo_url %}
-    <div><a href="{{ ata.anexo_url }}" target="_blank">📎 Anexo do aluno</a></div>
-  {% endif %}
-
   {% if ata.decisao %}
-    <div class="tag {{ 'ok' if ata.decisao == 'DEFERIDO' else 'no' }}">
-      {{ ata.decisao }}
+    <div style="margin-top:5px;">
+      {{ '🟢 Deferido' if ata.decisao == 'DEFERIDO' else '🔴 Indeferido' }}
     </div>
   {% endif %}
 
   {% if ata.parecer %}
     <div class="box">
-      <b>📝 Parecer:</b><br>
       {{ ata.parecer }}
     </div>
   {% endif %}
+</td>
 
-  {% if ata.status == "AGUARDANDO_COORD" %}
-  <form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
-    <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
+<td>{{ STATUS[ata.status] }}</td>
 
-    <select name="status">
-      <option value="DEFERIDO">Deferir</option>
-      <option value="INDEFERIDO">Indeferir</option>
-    </select>
+<td>
 
-    <input type="file" name="anexo_coord">
+{% if ata.status == "PENDENTE" %}
+<form method="POST" action="/atender/{{ ata.id }}">
+  <textarea name="mensagem" placeholder="Mensagem inicial"></textarea>
+  <button style="background: orange;">Atender</button>
+</form>
 
-    <button style="background: green;">Enviar</button>
-  </form>
-  {% else %}
-    <div class="tag ok">✔ Já analisado</div>
-  {% endif %}
+{% elif ata.status in ["EM_ATENDIMENTO", "RETORNADO_SECRETARIA"] %}
 
-</div>
+<form method="POST" action="/secretaria/anexo/{{ ata.id }}" enctype="multipart/form-data">
+  <textarea name="mensagem" placeholder="Mensagem ao aluno"></textarea>
+  <input type="file" name="anexo_secretaria">
+  <button style="background:#2563eb;">Enviar resposta</button>
+</form>
+
+<form method="POST" action="/enviar_coord/{{ ata.id }}">
+  <button style="background: purple;">Enviar Coord</button>
+</form>
+
+<form method="POST" action="/finalizar/{{ ata.id }}">
+  <button style="background: green;">Finalizar</button>
+</form>
+
+{% elif ata.status == "AGUARDANDO_COORD" %}
+<span>Na coordenação</span>
+
+{% elif ata.status == "FINALIZADO" %}
+<span>✔ Finalizado</span>
+{% endif %}
+
+{% if ata.anexo_url %}
+  <div><a href="{{ ata.anexo_url }}" target="_blank">📎 Aluno</a></div>
+{% endif %}
+
+{% if ata.anexo_secretaria %}
+  <div><a href="{{ ata.anexo_secretaria }}" target="_blank">📎 Secretaria</a></div>
+{% endif %}
+
+{% if ata.anexo_coord %}
+  <div><a href="{{ ata.anexo_coord }}" target="_blank">📎 Coordenação</a></div>
+{% endif %}
+
+</td>
+</tr>
 {% endfor %}
 
-</body>
-</html>
+</table>
+
+{% endblock %}

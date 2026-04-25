@@ -198,6 +198,13 @@ button {
     <div class="tag ok">🟢 Finalizado</div>
   {% endif %}
   {% if a["mensagem"] %}
+  {% if a["status"] == "FINALIZADO" %}
+  <div style="margin-top:8px;">
+    <a href="/processo/{{ a['id'] }}/pdf" target="_blank" style="color:#2563eb; font-weight:bold;">
+      📄 Baixar Processo Completo
+    </a>
+  </div>
+{% endif %}
   <div class="tag p2">
     💬 {{ a["mensagem"] }}
   </div>

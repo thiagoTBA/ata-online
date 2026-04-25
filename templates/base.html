@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}ATA Online{% endblock %}</title>
+
+<style>
+body {
+  margin:0;
+  font-family: system-ui;
+  background:#020617;
+  color:white;
+}
+
+/* 🔥 NAVBAR */
+.navbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#020617;
+  padding:12px 20px;
+  border-bottom:1px solid #334155;
+}
+
+.navbar a {
+  color:#60a5fa;
+  text-decoration:none;
+  margin-right:10px;
+}
+
+.logo {
+  font-weight:bold;
+}
+
+.user {
+  font-size:14px;
+}
+
+/* 🔥 CONTAINER PADRÃO */
+.container {
+  padding:20px;
+}
+</style>
+</head>
+
+<body>
+
+{% if session.get("user_id") %}
+<div class="navbar">
+
+  <div class="logo">📊 ATA Online</div>
+
+  <div>
+    <a href="/">🏠 Início</a>
+
+    {% if session["role"] == "secretaria" %}
+      <a href="/secretaria">🏢 Secretaria</a>
+    {% endif %}
+
+    {% if session["role"] == "coordenacao" %}
+      <a href="/coordenacao">🎓 Coordenação</a>
+    {% endif %}
+
+    {% if session["role"] in ["admin", "unit_admin"] %}
+      <a href="/admin/users">👥 Admin</a>
+      <a href="/admin/logs_unidade">📜 Logs</a>
+      <a href="/admin/protocolos">📂 Protocolos</a>
+    {% endif %}
+  </div>
+
+  <div class="user">
+    👤 {{ session["username"] }} |
+    <a href="/logout">Sair</a>
+  </div>
+
+</div>
+{% endif %}
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

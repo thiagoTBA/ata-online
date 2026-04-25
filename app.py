@@ -109,55 +109,6 @@ STATUS = {
     "INDEFERIDO": "Indeferido",
     "TRAMITADO": "Tramitado"
 }
-# ---------------- AUTH ----------------
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if "user_id" not in session:
-        return redirect("/login")
-
-    error = None
-
-    if request.method == "POST":
-        db = get_db()
-        cur = db.cursor()
-
-        username = request.form["username"].strip()
-        password = request.form["password"]
-        register_key = request.form["register_key"]
-
-        if register_key != REGISTER_KEY:
-            error = "Código inválido"
-
-        elif len(password) < 4:
-            error = "Senha muito curta"
-
-        else:
-            cur.execute("SELECT id FROM usuarios WHERE username=%s", (username,))
-            if cur.fetchone():
-                error = "Usuário já existe"
-            else:
-                unidade_id = session.get("unidade_id")
-
-                cur.execute("""
-                    INSERT INTO usuarios (username, password, unidade_id, role)
-                    VALUES (%s, %s, %s, 'user')
-                """, (
-                    username,
-                    generate_password_hash(password),
-                    unidade_id
-                ))
-
-                db.commit()
-                cur.close()
-                db.close()
-                return redirect("/login")
-
-        cur.close()
-        db.close()
-
-    return render_template("register.html", error=error)
-
 # ---------------- LOGIN ----------------
 
 @app.route("/login", methods=["GET", "POST"])
@@ -809,7 +760,90 @@ def parecer(id):
         db.close()
 
     return redirect("/coordenacao")
+# ---------------- PROCESSO ALUNO ---------------
+@app.route("/processo/<int:id>/pdf")
+def baixar_processo(id):
+    if "user_id" not in session:
+        return redirect("/login")
 
+    db = get_db()
+    cur = db.cursor()
+
+    # 🔒 só o dono pode baixar
+    cur.execute("""
+        SELECT * FROM atas_saida
+        WHERE id=%s AND usuario_id=%s
+    """, (id, session["user_id"]))
+
+    a = cur.fetchone()
+
+    if not a:
+        return "Sem permissão", 403
+
+    import io
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer)
+
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # 🔥 conteúdo
+    elements.append(Paragraph(f"<b>PROTOCOLO:</b> {a[0]}", styles["Title"]))
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph(f"<b>Aluno:</b> {a[1]}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>CPF:</b> {a[2]}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Email:</b> {a[3]}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Telefone:</b> {a[4]}", styles["Normal"]))
+
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph(f"<b>Curso:</b> {a[5]}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Status:</b> {a[8]}", styles["Normal"]))
+
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph("<b>Justificativa:</b>", styles["Heading3"]))
+    elements.append(Paragraph(a[6] or "-", styles["Normal"]))
+
+    elements.append(Spacer(1, 10))
+
+    if a[14]:
+        elements.append(Paragraph("<b>Mensagem da Secretaria:</b>", styles["Heading3"]))
+        elements.append(Paragraph(a[14], styles["Normal"]))
+
+    if a[13]:
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("<b>Parecer da Coordenação:</b>", styles["Heading3"]))
+        elements.append(Paragraph(a[13], styles["Normal"]))
+
+    if a[15]:
+        elements.append(Paragraph(f"<b>Decisão:</b> {a[15]}", styles["Normal"]))
+
+    elements.append(Spacer(1, 15))
+
+    # 🔗 anexos
+    if a[12]:
+        elements.append(Paragraph(f"Anexo aluno: {a[12]}", styles["Normal"]))
+
+    if a[22]:
+        elements.append(Paragraph(f"Anexo secretaria: {a[22]}", styles["Normal"]))
+
+    if a[21]:
+        elements.append(Paragraph(f"Anexo coordenação: {a[21]}", styles["Normal"]))
+
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    response = make_response(buffer.read())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f"attachment; filename=processo_{id}.pdf"
+
+    return response
 # ---------------- AUDITORIA ---------------
 @app.route("/admin/logs_unidade")
 def logs_unidade():
