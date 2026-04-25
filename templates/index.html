@@ -172,6 +172,11 @@ button {
   {% if a["protocolo"] %}
     <div class="tag ok">📄 {{ a["protocolo"] }}</div>
   {% endif %}
+  {% if a["anexo_secretaria"] %}
+  <div class="tag ok">
+    <a href="{{ a["anexo_secretaria"] }}" target="_blank">📎 Secretaria</a>
+  </div>
+{% endif %}
 
   <div class="tag p2">
     📌 {{ tipos.get(a["tipo"], "Desconhecido") }}

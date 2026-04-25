@@ -89,16 +89,18 @@ button {
   <!-- 🔥 AÇÕES -->
   {% if ata.status == "AGUARDANDO_COORD" %}
 
-    <form method="POST" action="/parecer/{{ ata.id }}">
-      <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
+    <form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
+  <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
 
-      <select name="status">
-        <option value="DEFERIDO">Deferir</option>
-        <option value="INDEFERIDO">Indeferir</option>
-      </select>
+  <select name="status">
+    <option value="DEFERIDO">Deferir</option>
+    <option value="INDEFERIDO">Indeferir</option>
+  </select>
 
-      <button style="background: green;">Enviar</button>
-    </form>
+  <input type="file" name="anexo_coord">
+
+  <button style="background: green;">Enviar</button>
+</form>
 
   {% elif ata.status == "RETORNADO_SECRETARIA" %}
 

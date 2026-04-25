@@ -84,12 +84,9 @@ button {
 <h3>➕ Criar Usuário</h3>
 
 <form method="POST" action="/admin/create_full_user">
-
   <input name="username" placeholder="Login (CPF)" required>
-
   <input name="nome" placeholder="Nome" required>
 
-  <!-- 🔥 UNIDADE -->
   {% if session["role"] == "admin" %}
     <select name="unidade_id">
       {% for un in unidades %}
@@ -100,9 +97,7 @@ button {
     <input type="hidden" name="unidade_id" value="{{ session['unidade_id'] }}">
   {% endif %}
 
-  <!-- 🔥 ROLE -->
   <select name="role">
-
     <option value="user">👤 User</option>
     <option value="secretaria">🏢 Secretaria</option>
     <option value="coordenacao">🎓 Coordenação</option>
@@ -111,10 +106,29 @@ button {
       <option value="unit_admin">🧑‍💼 Admin Unidade</option>
       <option value="admin">🔥 Admin</option>
     {% endif %}
-
   </select>
 
   <button>Criar</button>
+</form>
+
+<form method="GET">
+  <input name="q" placeholder="Buscar usuário">
+
+  <select name="role">
+    <option value="">Role</option>
+    <option value="user">User</option>
+    <option value="secretaria">Secretaria</option>
+    <option value="coordenacao">Coordenação</option>
+  </select>
+
+  <select name="unidade">
+    <option value="">Unidade</option>
+    {% for un in unidades %}
+      <option value="{{ un[0] }}">{{ un[1] }}</option>
+    {% endfor %}
+  </select>
+
+  <button>Filtrar</button>
 </form>
 
 <table>
@@ -129,6 +143,7 @@ button {
 {% for u in users %}
 <tr>
 
+<!-- 🔥 FORM DE UPDATE -->
 <form method="POST">
   <td>{{ u[0] }}</td>
 
@@ -148,7 +163,6 @@ button {
     {% endif %}
   </td>
 
-  <!-- 🔥 UNIDADE -->
   <td>
     {% if session["role"] == "admin" %}
       <select name="unidade_id">
@@ -164,32 +178,16 @@ button {
     {% endif %}
   </td>
 
-  <!-- 🔥 ROLE -->
   <td>
     <select name="role">
-
-      <option value="user" {% if u[2]=='user' %}selected{% endif %}>
-        👤 User
-      </option>
-
-      <option value="secretaria" {% if u[2]=='secretaria' %}selected{% endif %}>
-        🏢 Secretaria
-      </option>
-
-      <option value="coordenacao" {% if u[2]=='coordenacao' %}selected{% endif %}>
-        🎓 Coordenação
-      </option>
-
-      <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>
-        🧑‍💼 Admin Unidade
-      </option>
+      <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
+      <option value="secretaria" {% if u[2]=='secretaria' %}selected{% endif %}>Secretaria</option>
+      <option value="coordenacao" {% if u[2]=='coordenacao' %}selected{% endif %}>Coordenação</option>
+      <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>Admin Unidade</option>
 
       {% if session["role"] == "admin" %}
-      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>
-        🔥 Admin Sistema
-      </option>
+      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>Admin</option>
       {% endif %}
-
     </select>
   </td>
 
@@ -198,9 +196,13 @@ button {
     <button class="btn-save">Salvar</button>
 </form>
 
+    <!-- 🔑 RESET (AGORA CERTO) -->
+    <form method="POST" action="/admin/reset_password/{{ u[0] }}">
+      <button class="btn-save">🔑 Reset</button>
+    </form>
+
     {% if session["role"] == "admin" %}
-    <form method="POST" action="/admin/delete_user/{{ u[0] }}"
-          onsubmit="return confirm('Excluir usuário?')">
+    <form method="POST" action="/admin/delete_user/{{ u[0] }}">
       <button class="btn-delete">Excluir</button>
     </form>
     {% endif %}

@@ -391,7 +391,93 @@ def finalizar(id):
     db.close()
 
     return redirect("/secretaria")
+#-------------------send file secret------------
+@app.route("/secretaria/anexo/<int:id>", methods=["POST"])
+def secretaria_anexo(id):
+    if "user_id" not in session:
+        return redirect("/login")
 
+    if session.get("role") not in ["admin", "secretaria"]:
+        return "Sem permissão", 403
+
+    mensagem = request.form.get("mensagem", "").strip()
+    file = request.files.get("anexo_secretaria")
+
+    if not mensagem and not file:
+        return "Envie mensagem ou anexo", 400
+
+    if mensagem and len(mensagem) > 1000:
+        return "Mensagem muito grande", 400
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        # 🔍 valida protocolo
+        cur.execute("""
+            SELECT aluno_nome, status
+            FROM atas_saida
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (id, session["unidade_id"]))
+
+        row = cur.fetchone()
+        if not row:
+            return "Protocolo não encontrado", 404
+
+        nome, status = row
+
+        if status not in ["EM_ATENDIMENTO", "RETORNADO_SECRETARIA"]:
+            return "Não pode enviar anexo neste estado", 400
+
+        anexo_url = None
+
+        # 📎 upload
+        if file and file.filename:
+            filename = file.filename.lower()
+
+            allowed_ext = ["pdf", "png", "jpg", "jpeg"]
+            ext = filename.split(".")[-1]
+
+            if ext not in allowed_ext:
+                return "Arquivo inválido", 400
+
+            # 🔒 limite de tamanho (5MB)
+            file.seek(0, os.SEEK_END)
+            size = file.tell()
+            file.seek(0)
+
+            if size > 5 * 1024 * 1024:
+                return "Arquivo muito grande (máx 5MB)", 400
+
+            result = cloudinary.uploader.upload(file)
+            anexo_url = result["secure_url"]
+
+        # 🧾 update no banco
+        cur.execute("""
+            UPDATE atas_saida
+            SET mensagem = COALESCE(mensagem, '') || %s,
+                anexo_secretaria = COALESCE(%s, anexo_secretaria)
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (
+            ("\n\n" + mensagem) if mensagem else "",
+            anexo_url,
+            id,
+            session["unidade_id"]
+        ))
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        return f"Erro: {e}", 500
+
+    finally:
+        cur.close()
+        db.close()
+
+    log_action(session["user_id"], "SECRETARIA_ENVIOU_ANEXO", f"id={id} | aluno={nome}")
+
+    return redirect("/secretaria")
 # ---------------- TRANSMISSÃO ----------------
 @app.route("/tramitar/<int:id>", methods=["POST"])
 def tramitar(id):
@@ -400,37 +486,41 @@ def tramitar(id):
 
     nova_unidade = request.form.get("unidade_id")
 
+    if not nova_unidade:
+        return "Unidade inválida", 400
+
     db = get_db()
     cur = db.cursor()
 
-    # 🔍 valida protocolo + status
-    cur.execute("""
-        SELECT status FROM atas_saida
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (id, session["unidade_id"]))
+    try:
+        cur.execute("""
+            SELECT status FROM atas_saida
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (id, session["unidade_id"]))
 
-    row = cur.fetchone()
-    if not row:
-        return "Protocolo não encontrado", 404
+        row = cur.fetchone()
+        if not row:
+            return "Protocolo não encontrado", 404
 
-    status = row[0]
+        if row[0] != "EM_ATENDIMENTO":
+            return "Só pode tramitar em atendimento", 400
 
-    if status != "EM_ATENDIMENTO":
-        return "Só pode tramitar protocolos em atendimento", 400
+        cur.execute("""
+            UPDATE atas_saida
+            SET unidade_atual_id=%s,
+                status='AGUARDANDO_COORD'
+            WHERE id=%s AND unidade_atual_id=%s AND status='EM_ATENDIMENTO'
+        """, (nova_unidade, id, session["unidade_id"]))
 
-    # ✅ update
-    cur.execute("""
-        UPDATE atas_saida
-        SET unidade_atual_id=%s,
-            status='AGUARDANDO_COORD'
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (nova_unidade, id, session["unidade_id"]))
+        db.commit()
 
-    log_action(session["user_id"], "TRAMITOU", f"id={id} -> unidade={nova_unidade}")
+    except:
+        db.rollback()
+        return "Erro ao tramitar", 500
 
-    db.commit()
-    cur.close()
-    db.close()
+    finally:
+        cur.close()
+        db.close()
 
     return redirect("/secretaria")
 # ---------------- COORDENAÇÃO ----------------
@@ -544,42 +634,51 @@ def atender(id):
     if session.get("role") not in ["admin", "secretaria"]:
         return "Sem permissão", 403
 
+    mensagem = request.form.get("mensagem", "").strip()
+
+    if len(mensagem) > 1000:
+        return "Mensagem muito grande", 400
+
     db = get_db()
     cur = db.cursor()
 
-    # 🔍 valida protocolo + status
-    cur.execute("""
-        SELECT aluno_nome, status FROM atas_saida
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (id, session["unidade_id"]))
+    try:
+        cur.execute("""
+            SELECT aluno_nome FROM atas_saida
+            WHERE id=%s AND unidade_atual_id=%s AND status='PENDENTE'
+        """, (id, session["unidade_id"]))
 
-    row = cur.fetchone()
-    if not row:
-        return "Protocolo não encontrado", 404
+        row = cur.fetchone()
+        if not row:
+            return "Protocolo inválido ou já atendido", 400
 
-    nome, status = row
+        nome = row[0]
 
-    if status != "PENDENTE":
-        return "Só é possível atender protocolos pendentes", 400
+        cur.execute("""
+            UPDATE atas_saida
+            SET atendente=%s,
+                data_atendimento=NOW(),
+                mensagem=%s,
+                status='EM_ATENDIMENTO'
+            WHERE id=%s AND unidade_atual_id=%s AND status='PENDENTE'
+        """, (
+            session["username"],
+            mensagem,
+            id,
+            session["unidade_id"]
+        ))
 
-    # ✅ update
-    cur.execute("""
-        UPDATE atas_saida
-        SET atendente=%s,
-            data_atendimento=NOW(),
-            status='EM_ATENDIMENTO'
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (
-        session["username"],
-        id,
-        session["unidade_id"]
-    ))
+        db.commit()
+
+    except:
+        db.rollback()
+        return "Erro ao atender", 500
+
+    finally:
+        cur.close()
+        db.close()
 
     log_action(session["user_id"], "ATENDEU", f"id={id} | aluno={nome}")
-
-    db.commit()
-    cur.close()
-    db.close()
 
     return redirect("/secretaria")
 # ---------------- PARECER ----------------
@@ -591,48 +690,151 @@ def parecer(id):
     if session.get("role") not in ["admin", "coordenacao"]:
         return "Sem permissão", 403
 
-    parecer = request.form["parecer"]
-    decisao = request.form["status"]
+    parecer = request.form.get("parecer", "").strip()
+    decisao = request.form.get("status")
+
+    if not parecer:
+        return "Parecer obrigatório", 400
+
+    if len(parecer) > 2000:
+        return "Parecer muito grande", 400
 
     db = get_db()
     cur = db.cursor()
 
-    # 🔍 valida status
-    cur.execute("""
-        SELECT status FROM atas_saida
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (id, session["unidade_id"]))
+    try:
+        cur.execute("""
+            SELECT status FROM atas_saida
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (id, session["unidade_id"]))
 
-    row = cur.fetchone()
-    if not row:
-        return "Protocolo não encontrado", 404
+        row = cur.fetchone()
+        if not row:
+            return "Protocolo não encontrado", 404
 
-    if row[0] != "AGUARDANDO_COORD":
-        return "Protocolo não está na coordenação", 400
+        if row[0] != "AGUARDANDO_COORD":
+            return "Protocolo não está na coordenação", 400
 
-    # ✅ update
-    cur.execute("""
-        UPDATE atas_saida
-        SET parecer=%s,
-            decisao=%s,
-            coordenador=%s,
-            data_parecer=NOW(),
-            status='RETORNADO_SECRETARIA'
-        WHERE id=%s AND unidade_atual_id=%s
-    """, (
-        parecer,
-        decisao,
-        session["username"],
-        id,
-        session["unidade_id"]
-    ))
+        file = request.files.get("anexo_coord")
+        anexo_coord = None
 
-    db.commit()
-    cur.close()
-    db.close()
+        # 📎 upload com validação
+        if file and file.filename:
+            filename = file.filename.lower()
 
-    return redirect("/")
+            allowed_ext = ["pdf", "png", "jpg", "jpeg"]
+            ext = filename.split(".")[-1]
 
+            if ext not in allowed_ext:
+                return "Arquivo inválido", 400
+
+            # 🔒 limite 5MB
+            file.seek(0, os.SEEK_END)
+            size = file.tell()
+            file.seek(0)
+
+            if size > 5 * 1024 * 1024:
+                return "Arquivo muito grande (máx 5MB)", 400
+
+            result = cloudinary.uploader.upload(file)
+            anexo_coord = result["secure_url"]
+
+        # 🧾 update
+        if anexo_coord:
+            cur.execute("""
+                UPDATE atas_saida
+                SET parecer=%s,
+                    decisao=%s,
+                    anexo_coord=%s,
+                    coordenador=%s,
+                    data_parecer=NOW(),
+                    status='RETORNADO_SECRETARIA'
+                WHERE id=%s AND unidade_atual_id=%s AND status='AGUARDANDO_COORD'
+            """, (
+                parecer,
+                decisao,
+                anexo_coord,
+                session["username"],
+                id,
+                session["unidade_id"]
+            ))
+
+        else:
+            cur.execute("""
+                UPDATE atas_saida
+                SET parecer=%s,
+                    decisao=%s,
+                    coordenador=%s,
+                    data_parecer=NOW(),
+                    status='RETORNADO_SECRETARIA'
+                WHERE id=%s AND unidade_atual_id=%s AND status='AGUARDANDO_COORD'
+            """, (
+                parecer,
+                decisao,
+                session["username"],
+                id,
+                session["unidade_id"]
+            ))
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        return f"Erro ao registrar parecer: {e}", 500
+
+    finally:
+        cur.close()
+        db.close()
+
+    return redirect("/coordenacao")
+
+# ---------------- ANEXO ---------------
+@app.route("/coord_tramitar/<int:id>", methods=["POST"])
+def coord_tramitar(id):
+    if session.get("role") not in ["admin", "coordenacao"]:
+        return "Sem permissão", 403
+
+    nova_unidade = request.form.get("unidade_id")
+
+    if not nova_unidade:
+        return "Unidade inválida", 400
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute("""
+            SELECT status FROM atas_saida
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (id, session["unidade_id"]))
+
+        row = cur.fetchone()
+        if not row:
+            return "Protocolo inválido", 404
+
+        if row[0] not in ["AGUARDANDO_COORD", "RETORNADO_SECRETARIA"]:
+            return "Não pode tramitar neste estado", 400
+
+        cur.execute("""
+            UPDATE atas_saida
+            SET unidade_atual_id=%s,
+                status='AGUARDANDO_COORD'
+            WHERE id=%s AND unidade_atual_id=%s
+        """, (nova_unidade, id, session["unidade_id"]))
+
+        db.commit()
+
+    except:
+        db.rollback()
+        return "Erro ao tramitar", 500
+
+    finally:
+        cur.close()
+        db.close()
+
+    log_action(session["user_id"], "COORD_TRAMITOU", f"id={id}")
+
+    return redirect("/coordenacao")
 # ---------------- admin supa ----------------
 @app.route("/admin/create_full_user", methods=["POST"])
 def create_full_user():
@@ -640,14 +842,12 @@ def create_full_user():
         return "Sem permissão", 403
 
     username = request.form.get("username")
-    nome = request.form.get("nome")
     unidade_id = request.form.get("unidade_id")
     role = request.form.get("role")
 
     if not username or not unidade_id or not role:
         return "Dados inválidos", 400
 
-    # 🔒 unit_admin só cria na própria unidade
     if session["role"] == "unit_admin":
         unidade_id = session["unidade_id"]
 
@@ -672,19 +872,19 @@ def create_full_user():
 
         db.commit()
 
-    except Exception as e:
+    except:
         db.rollback()
-        return f"Erro: {e}"
+        return "Erro ao criar usuário", 500
 
     finally:
         cur.close()
         db.close()
 
     return f"""
-    <h3>Usuário criado</h3>
-    <p>Login: {username}</p>
-    <p>Senha: {senha}</p>
-    <a href="/admin/users">Voltar</a>
+    <script>
+    alert("Usuário criado!\\nLogin: {username}\\nSenha: {senha}");
+    window.location.href="/admin/users";
+    </script>
     """
 # ---------------- ENVIAR UNIDADES ----------------
 
@@ -756,8 +956,6 @@ def admin_unidades():
 
     return render_template("unidades.html", unidades=unidades)
 
-# ---------------- ADMIN USERS ----------------
-
 @app.route("/admin/users", methods=["GET", "POST"])
 def admin_users():
     if "user_id" not in session:
@@ -781,10 +979,9 @@ def admin_users():
         if new_role not in ["user", "unit_admin", "secretaria", "coordenacao", "admin"]:
             return "Role inválido", 400
 
-        # 🔴 ADMIN
         if role == "admin":
             if user_id == session["user_id"] and new_role != "admin":
-                return "Você não pode remover seu próprio admin", 400
+                return "Não pode remover seu admin", 400
 
             cur.execute("""
                 UPDATE usuarios
@@ -792,13 +989,8 @@ def admin_users():
                 WHERE id=%s
             """, (new_unidade, new_role, user_id))
 
-        # 🟡 UNIT ADMIN
         elif role == "unit_admin":
-
-            if new_role == "admin":
-                return "Sem permissão", 403
-
-            if new_role == "unit_admin":
+            if new_role in ["admin", "unit_admin"]:
                 return "Sem permissão", 403
 
             cur.execute("""
@@ -809,21 +1001,37 @@ def admin_users():
 
         db.commit()
 
-    # ---------------- LISTAGEM ----------------
-    if role == "admin":
-        cur.execute("""
-            SELECT id, username, role, created_at, unidade_id
-            FROM usuarios
-            ORDER BY id
-        """)
-    else:
-        cur.execute("""
-            SELECT id, username, role, created_at, unidade_id
-            FROM usuarios
-            WHERE unidade_id=%s
-            ORDER BY id
-        """, (unidade_id,))
+    # ---------------- FILTROS ----------------
+    q = request.args.get("q")
+    role_f = request.args.get("role")
+    unidade_f = request.args.get("unidade")
 
+    query = """
+        SELECT id, username, role, created_at, unidade_id
+        FROM usuarios
+        WHERE 1=1
+    """
+    params = []
+
+    if role == "unit_admin":
+        query += " AND unidade_id=%s"
+        params.append(unidade_id)
+
+    if q:
+        query += " AND username ILIKE %s"
+        params.append(f"%{q}%")
+
+    if role_f:
+        query += " AND role=%s"
+        params.append(role_f)
+
+    if unidade_f and role == "admin":
+        query += " AND unidade_id=%s"
+        params.append(unidade_f)
+
+    query += " ORDER BY id DESC"
+
+    cur.execute(query, tuple(params))
     users = cur.fetchall()
 
     cur.execute("SELECT id, nome FROM unidades ORDER BY nome")
@@ -837,45 +1045,69 @@ def admin_users():
 # ---------------- RESERT ADM ----------------
 @app.route("/admin/reset_password/<int:id>", methods=["POST"])
 def reset_password(id):
-    if not is_admin():
+    if session.get("role") not in ["admin", "unit_admin"]:
         return "Sem permissão", 403
-
-    nova = gerar_senha()
 
     db = get_db()
     cur = db.cursor()
+
+    # 🔒 unit_admin só da unidade dele
+    if session["role"] == "unit_admin":
+        cur.execute("SELECT unidade_id FROM usuarios WHERE id=%s", (id,))
+        u = cur.fetchone()
+        if not u or u[0] != session["unidade_id"]:
+            return "Sem permissão", 403
+
+    nova = gerar_senha()
 
     cur.execute("""
         UPDATE usuarios
         SET password=%s
         WHERE id=%s
-    """, (
-        generate_password_hash(nova),
-        id
-    ))
+    """, (generate_password_hash(nova), id))
 
     db.commit()
     cur.close()
     db.close()
 
-    log_action(session["user_id"], "RESET_PASSWORD", f"user={id}")
-
-    return f"Nova senha: {nova}"
-
+    return f"""
+<script>
+alert("Nova senha: {nova}");
+window.location.href="/admin/users";
+</script>
+"""
 # ---------------- TROCA SENHA USER ----------------
 @app.route("/change_password", methods=["POST"])
 def change_password():
     if "user_id" not in session:
         return redirect("/login")
 
+    atual = request.form.get("atual")
     nova = request.form.get("nova")
 
-    if not nova or len(nova) < 4:
-        return "Senha inválida", 400
+    if not atual or not nova:
+        return "Preencha todos os campos", 400
+
+    if len(nova) < 4:
+        return "Senha muito curta", 400
 
     db = get_db()
     cur = db.cursor()
 
+    # 🔍 pega hash atual
+    cur.execute("SELECT password FROM usuarios WHERE id=%s", (session["user_id"],))
+    row = cur.fetchone()
+
+    if not row:
+        return "Usuário inválido", 400
+
+    hash_db = row[0]
+
+    # 🔒 valida senha atual
+    if not check_password_hash(hash_db, atual):
+        return "Senha atual incorreta", 400
+
+    # ✅ atualiza
     cur.execute("""
         UPDATE usuarios
         SET password=%s
