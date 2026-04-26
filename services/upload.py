@@ -9,4 +9,5 @@ cloudinary.config(
 )
 
 def upload_file(file):
-    return cloudinary.uploader.upload(file)["secure_url"]
+    result = cloudinary.uploader.upload(file)
+    return result["secure_url"]

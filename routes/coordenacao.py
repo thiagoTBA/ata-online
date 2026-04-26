@@ -4,7 +4,7 @@ from routes.main import STATUS
 from services.db import get_db
 from services.utils import log_action, formatar_protocolo
 from routes.main import STATUS
-
+from services.upload import upload_file
 coordenacao_bp = Blueprint("coordenacao", __name__)
 
 
@@ -112,10 +112,7 @@ def parecer(id):
 
             if size > 5 * 1024 * 1024:
                 return "Arquivo muito grande (máx 5MB)", 400
-
-            import cloudinary.uploader
-            result = cloudinary.uploader.upload(file)
-            anexo_coord = result["secure_url"]
+            anexo_coord = upload_file(file)
 
         if anexo_coord:
             cur.execute("""
