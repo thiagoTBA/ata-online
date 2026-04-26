@@ -3,6 +3,7 @@ import psycopg2.extras
 from routes.main import STATUS
 from services.db import get_db
 from services.utils import log_action, formatar_protocolo
+from routes.main import STATUS
 
 coordenacao_bp = Blueprint("coordenacao", __name__)
 
@@ -53,6 +54,7 @@ def coordenacao():
         "coordenacao.html",
         atas=atas,
         tipos=None,
+        STATUS=STATUS,
         stats=stats,
         role=session["role"]
     )

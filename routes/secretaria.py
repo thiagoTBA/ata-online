@@ -47,6 +47,7 @@ def secretaria():
         "secretaria.html",
         atas=atas,
         tipos=None,
+        STATUS=STATUS,
         stats=stats,
         role=session["role"]
     )
