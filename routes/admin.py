@@ -253,7 +253,6 @@ def admin_users():
     users=users,
     unidades=unidades,
     page=page,
-    total_pages=total_pages,
     total_pages=total_pages
 )
 
