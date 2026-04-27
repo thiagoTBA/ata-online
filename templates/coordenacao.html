@@ -4,119 +4,214 @@
 
 {% block content %}
 
-<h2>🎓 Coordenação</h2>
+<h2 style="margin-bottom:20px;">🎓 Painel de Coordenação</h2>
 
 <style>
-.cards {
+:root{
+  --card:#111827;
+  --soft:#1f2937;
+  --bg:#020617;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+  --primary:#8b5cf6;
+  --green:#22c55e;
+  --orange:#f97316;
+}
+
+.cards{
   display:flex;
-  gap:10px;
+  gap:15px;
   flex-wrap:wrap;
-  margin-bottom:15px;
+  margin-bottom:20px;
 }
 
-.card {
+.card{
   flex:1;
-  min-width:120px;
-  padding:10px;
-  border-radius:10px;
+  min-width:160px;
+  padding:15px;
+  border-radius:12px;
+  background:var(--card);
+  box-shadow:0 0 0 1px #111;
   text-align:center;
-  font-weight:bold;
-  background:#1e293b;
-  border-left:4px solid transparent;
 }
 
-.card.AGUARDANDO_COORD { border-color:#8b5cf6; }
-.card.FINALIZADO { border-color:#22c55e; }
+.card strong{
+  font-size:22px;
+  display:block;
+  margin-top:5px;
+}
 
-table {
+.card.AGUARDANDO_COORD{ border-left:4px solid var(--primary);}
+.card.FINALIZADO{ border-left:4px solid var(--green);}
+
+/* TABLE */
+.table-container{
+  background:var(--card);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px #111;
+}
+
+table{
   width:100%;
   border-collapse:collapse;
-  margin-top:10px;
 }
 
-th, td {
-  padding:10px;
-  border-bottom:1px solid #334155;
+th{
+  text-align:left;
+  font-size:13px;
+  color:var(--muted);
+  padding:14px;
+  border-bottom:1px solid #222;
+}
+
+td{
+  padding:16px;
+  border-bottom:1px solid #111;
   vertical-align:top;
 }
 
-tr {
-  background:#020617;
-  transition:0.2s;
+tr:hover{
+  background:rgba(255,255,255,0.03);
 }
 
-tr:hover {
-  background:#1e293b;
-}
-
-tr.AGUARDANDO_COORD { border-left:4px solid #8b5cf6; }
-tr.RETORNADO_SECRETARIA { border-left:4px solid #f97316; }
-tr.FINALIZADO { border-left:4px solid #22c55e; }
-
-.box {
-  margin-top:8px;
-  padding:10px;
-  background:#020617;
-  border-left:3px solid #8b5cf6;
-  border-radius:8px;
-  word-break: break-word;
-}
-
-/* BADGE */
-.status-badge {
-  padding:4px 10px;
+/* STATUS */
+.status-badge{
+  padding:6px 12px;
   border-radius:999px;
   font-size:12px;
   font-weight:bold;
 }
 
-.status-AGUARDANDO_COORD { background:#ede9fe; color:#5b21b6; }
-.status-RETORNADO_SECRETARIA { background:#ffedd5; color:#9a3412; }
-.status-FINALIZADO { background:#dcfce7; color:#166534; }
-
-textarea {
-  width:100%;
-  margin-top:5px;
+.status-AGUARDANDO_COORD{
+  background:#ede9fe;
+  color:#5b21b6;
 }
 
-button {
-  margin-top:5px;
+.status-RETORNADO_SECRETARIA{
+  background:#ffedd5;
+  color:#9a3412;
+}
+
+.status-FINALIZADO{
+  background:#dcfce7;
+  color:#166534;
+}
+
+/* INFO BLOCK */
+.info{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:6px;
+  line-height:1.4;
+}
+
+/* BOX */
+.box{
+  margin-top:10px;
+  padding:12px;
+  background:var(--bg);
+  border-left:3px solid var(--primary);
+  border-radius:8px;
+  font-size:14px;
+}
+
+/* FORM */
+textarea{
   width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #222;
+  background:#020617;
+  color:white;
+  margin-top:8px;
+  resize:vertical;
+}
+
+select, input[type="file"]{
+  margin-top:8px;
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #222;
+  background:#020617;
+  color:white;
+}
+
+/* BUTTON */
+button{
+  margin-top:10px;
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+  background:var(--primary);
+  color:white;
+  transition:0.2s;
+}
+
+button:hover{
+  opacity:0.9;
+}
+
+/* ANEXOS */
+.anexos{
+  margin-top:10px;
+  font-size:13px;
+}
+
+.anexos a{
+  display:block;
+  margin-top:4px;
+  color:#60a5fa;
+  text-decoration:none;
 }
 </style>
 
+<!-- CARDS -->
 <div class="cards">
-  <div class="card AGUARDANDO_COORD">Aguardando<br>{{ stats.AGUARDANDO_COORD }}</div>
-  <div class="card FINALIZADO">Finalizados<br>{{ stats.FINALIZADO }}</div>
+  <div class="card AGUARDANDO_COORD">
+    Aguardando
+    <strong>{{ stats.AGUARDANDO_COORD }}</strong>
+  </div>
+
+  <div class="card FINALIZADO">
+    Finalizados
+    <strong>{{ stats.FINALIZADO }}</strong>
+  </div>
 </div>
 
+<!-- TABELA -->
+<div class="table-container">
 <table>
+
 <tr>
   <th style="width:120px;">Protocolo</th>
-  <th>Aluno</th>
-  <th style="width:120px;">Status</th>
-  <th style="width:250px;">Ações</th>
+  <th>Detalhes</th>
+  <th style="width:140px;">Status</th>
+  <th style="width:280px;">Ações</th>
 </tr>
 
 {% for ata in atas %}
 <tr class="{{ ata.status }}">
 
-<td>{{ ata.protocolo }}</td>
+<td>
+  <strong>#{{ ata.protocolo }}</strong>
+</td>
 
 <td>
-  <b>{{ ata.aluno_nome }}</b><br>
+  <strong>{{ ata.aluno_nome }}</strong>
 
-  <div style="margin-top:5px; font-size:13px; color:#94a3b8;">
+  <div class="info">
     {% if ata.atendente %}
-      👨‍💼 Atendido por: {{ ata.atendente }}
+      👨‍💼 {{ ata.atendente }}<br>
     {% endif %}
-  </div>
-
-  <div style="margin-top:5px; font-size:13px; color:#94a3b8; line-height:1.4;">
-    <div>📄 {{ ata.cpf }}</div>
-    <div>📞 {{ ata.telefone }}</div>
-    <div>🎓 {{ ata.curso }} | {{ ata.turno }}</div>
-    <div>📍 {{ ata.municipio }}</div>
+    📄 {{ ata.cpf }}<br>
+    📞 {{ ata.telefone }}<br>
+    🎓 {{ ata.curso }} ({{ ata.turno }})<br>
+    📍 {{ ata.municipio }}
   </div>
 
   <div class="box">
@@ -125,17 +220,16 @@ button {
   </div>
 
   {% if ata.parecer %}
-    <div class="box">
-      📝 {{ ata.parecer }}
-    </div>
+  <div class="box">
+    📝 {{ ata.parecer }}
+  </div>
   {% endif %}
 
   {% if ata.decisao %}
-    <div style="margin-top:5px;">
-      {{ '🟢 Deferido' if ata.decisao == 'DEFERIDO' else '🔴 Indeferido' }}
-    </div>
+  <div style="margin-top:8px; font-weight:bold;">
+    {{ '🟢 Deferido' if ata.decisao == 'DEFERIDO' else '🔴 Indeferido' }}
+  </div>
   {% endif %}
-
 </td>
 
 <td>
@@ -149,43 +243,49 @@ button {
 {% if ata.status == "AGUARDANDO_COORD" %}
 
 <form method="POST" action="/parecer/{{ ata.id }}" enctype="multipart/form-data">
-  <textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
 
-  <select name="status" required>
-    <option value="">Decisão</option>
-    <option value="DEFERIDO">Deferido</option>
-    <option value="INDEFERIDO">Indeferido</option>
-  </select>
+<textarea name="parecer" placeholder="Digite o parecer..." required></textarea>
 
-  <input type="file" name="anexo_coord">
+<select name="status" required>
+  <option value="">Decisão</option>
+  <option value="DEFERIDO">Deferido</option>
+  <option value="INDEFERIDO">Indeferido</option>
+</select>
 
-  <button style="background: purple;">Enviar Parecer</button>
+<input type="file" name="anexo_coord">
+
+<button>Enviar Parecer</button>
+
 </form>
 
 {% elif ata.status == "RETORNADO_SECRETARIA" %}
-<span>✔ Já analisado</span>
+<span style="color:#f97316;">✔ Já analisado</span>
 
 {% elif ata.status == "FINALIZADO" %}
-<span>✔ Finalizado</span>
+<span style="color:#22c55e;">✔ Finalizado</span>
 
 {% endif %}
 
+<div class="anexos">
 {% if ata.anexo_url %}
-  <div><a href="{{ ata.anexo_url }}" target="_blank">📎 Aluno</a></div>
+  <a href="{{ ata.anexo_url }}" target="_blank">📎 Aluno</a>
 {% endif %}
 
 {% if ata.anexo_secretaria %}
-  <div><a href="{{ ata.anexo_secretaria }}" target="_blank">📎 Secretaria</a></div>
+  <a href="{{ ata.anexo_secretaria }}" target="_blank">📎 Secretaria</a>
 {% endif %}
 
 {% if ata.anexo_coord %}
-  <div><a href="{{ ata.anexo_coord }}" target="_blank">📎 Coordenação</a></div>
+  <a href="{{ ata.anexo_coord }}" target="_blank">📎 Coordenação</a>
 {% endif %}
+</div>
 
 </td>
+
 </tr>
 {% endfor %}
 
 </table>
+</div>
 
 {% endblock %}
