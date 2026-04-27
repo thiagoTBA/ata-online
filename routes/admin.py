@@ -14,7 +14,12 @@ def create_user():
 
     username = request.form.get("username")
     cpf = request.form.get("cpf")
-    unidade_id = session.get("unidade_id")
+    if session["role"] == "admin":
+        unidade_id = request.form.get("unidade_id")
+        if not unidade_id:
+            return "Selecione uma unidade", 400
+    else:
+        unidade_id = session.get("unidade_id")
 
     if not username or not cpf:
         return "Dados obrigatórios", 400
@@ -61,11 +66,18 @@ def create_full_user():
     unidade_id = request.form.get("unidade_id")
     role = request.form.get("role")
 
-    if not username or not unidade_id or not role:
+    # 🔒 validações básicas
+    if not username or not role:
         return "Dados inválidos", 400
 
-    if session["role"] == "unit_admin":
+    # 🔥 regra por tipo de usuário
+    if session["role"] == "admin":
+        if not unidade_id:
+            return "Unidade obrigatória", 400
+
+    elif session["role"] == "unit_admin":
         unidade_id = session["unidade_id"]
+
         if role in ["admin", "unit_admin"]:
             return "Sem permissão", 403
 
@@ -87,9 +99,9 @@ def create_full_user():
 
         db.commit()
 
-    except:
+    except Exception as e:
         db.rollback()
-        return "Erro ao criar usuário", 500
+        return f"Erro ao criar usuário: {e}", 500
 
     finally:
         cur.close()
@@ -208,18 +220,43 @@ def admin_users():
         query += " AND unidade_id=%s"
         params.append(unidade_f)
 
-    query += " ORDER BY id DESC"
+    # 🔢 paginação
+    page = int(request.args.get("page", 1))
+    limit = 20
+    offset = (page - 1) * limit
 
-    cur.execute(query, tuple(params))
+    # 🔍 query com paginação
+    query_pag = query + " ORDER BY id DESC LIMIT %s OFFSET %s"
+
+    params_pag = params.copy()
+    params_pag.extend([limit, offset])
+
+    cur.execute(query_pag, tuple(params_pag))
     users = cur.fetchall()
+
+    # 🔢 total de registros
+    count_query = "SELECT COUNT(*) FROM (" + query + ") as total"
+    cur.execute(count_query, tuple(params))
+    total = cur.fetchone()[0]
+
+    total_pages = (total + limit - 1) // limit
 
     cur.execute("SELECT id, nome FROM unidades ORDER BY nome")
     unidades = cur.fetchall()
 
     cur.close()
     db.close()
+    total=total
 
-    return render_template("admin_users.html", users=users, unidades=unidades)
+    return render_template(
+    "admin_users.html",
+    users=users,
+    unidades=unidades,
+    page=page,
+    total_pages=total_pages,
+    total_pages=total_pages
+)
+
 
 
 # ---------------- RESET PASSWORD ----------------

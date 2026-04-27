@@ -91,7 +91,7 @@ def change_password():
     if not atual or not nova:
         return "Preencha todos os campos", 400
 
-    if len(nova) < 4:
+    if len(nova) < 6:
         return "Senha muito curta", 400
 
     db = get_db()
@@ -129,3 +129,126 @@ def change_password():
     log_action(session["user_id"], "CHANGE_PASSWORD")
 
     return redirect("/")
+
+
+# ---------------- RESET PASS ----------------
+
+from uuid import uuid4
+from datetime import datetime, timedelta
+
+# 🔒 RATE LIMIT RESET
+reset_tentativas = {}
+
+@auth_bp.route("/esqueci", methods=["GET", "POST"])
+def esqueci_senha():
+    if request.method == "POST":
+        ip = request.remote_addr
+
+        tent = reset_tentativas.get(ip)
+
+        # 🚨 bloqueio por excesso
+        if tent:
+            if tent["count"] >= 3 and (datetime.now() - tent["time"]).seconds < 300:
+                return "Muitas tentativas, tente novamente em alguns minutos"
+
+        username = request.form.get("username")
+
+        if not username:
+            return "Informe o usuário", 400
+
+        db = get_db()
+        cur = db.cursor()
+
+        cur.execute("SELECT id FROM usuarios WHERE username=%s", (username,))
+        user = cur.fetchone()
+
+        if not user:
+            return "Usuário não encontrado", 404
+
+        from uuid import uuid4
+        from datetime import timedelta
+
+        token = str(uuid4())
+        expira = datetime.now() + timedelta(hours=1)
+
+        cur.execute("""
+            UPDATE usuarios
+            SET reset_token=%s, reset_expira=%s
+            WHERE id=%s
+        """, (token, expira, user[0]))
+
+        db.commit()
+        cur.close()
+        db.close()
+
+        # 🔢 atualiza tentativas
+        reset_tentativas[ip] = {
+            "count": tent["count"] + 1 if tent else 1,
+            "time": datetime.now()
+        }
+
+        # 🔥 resposta (sem email por enquanto)
+        return f"""
+        <h3>🔑 Recuperação de senha</h3>
+        <p>Use o link abaixo:</p>
+        <p><a href="/reset/{token}">Resetar senha</a></p>
+        <p>⏳ Este link expira em 1 hora</p>
+        """
+
+    return """
+    <h3>Esqueci minha senha</h3>
+    <form method="POST">
+        <input name="username" placeholder="Usuário" required>
+        <button>Recuperar senha</button>
+    </form>
+    """
+@auth_bp.route("/reset/<token>", methods=["GET", "POST"])
+def reset_senha(token):
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("""
+        SELECT id, reset_expira FROM usuarios
+        WHERE reset_token=%s
+    """, (token,))
+
+    user = cur.fetchone()
+
+    if not user:
+        return "Token inválido", 400
+
+    if datetime.now() > user[1]:
+        return "Token expirado", 400
+
+    if request.method == "POST":
+        nova = request.form.get("nova")
+
+        if not nova or len(nova) < 6:
+            return "Senha muito curta (mínimo 6 caracteres)", 400
+
+        from werkzeug.security import generate_password_hash
+
+        cur.execute("""
+            UPDATE usuarios
+            SET password=%s,
+                reset_token=NULL,
+                reset_expira=NULL
+            WHERE id=%s
+        """, (
+            generate_password_hash(nova),
+            user[0]
+        ))
+
+        db.commit()
+        cur.close()
+        db.close()
+
+        return redirect("/login")
+
+    return """
+    <h3>🔑 Nova senha</h3>
+    <form method="POST">
+        <input type="password" name="nova" placeholder="Nova senha" required>
+        <button>Atualizar senha</button>
+    </form>
+    """

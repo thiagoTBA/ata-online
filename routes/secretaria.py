@@ -17,13 +17,29 @@ def secretaria():
     db = get_db()
     cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    # 🔢 paginação
+    page = int(request.args.get("page", 1))
+    limit = 20
+    offset = (page - 1) * limit
+
+    # 🔍 query paginada
     cur.execute("""
-        SELECT * FROM atas_saida
-        WHERE unidade_atual_id=%s
-        ORDER BY id DESC
-    """, (session["unidade_id"],))
+    SELECT * FROM atas_saida
+    WHERE unidade_atual_id=%s
+    ORDER BY id DESC
+    LIMIT %s OFFSET %s
+    """, (session["unidade_id"], limit, offset))
 
     atas = cur.fetchall()
+
+    # 🔢 total de registros
+    cur.execute("""
+    SELECT COUNT(*) FROM atas_saida
+    WHERE unidade_atual_id=%s
+    """, (session["unidade_id"],))
+
+    total = cur.fetchone()[0]
+    total_pages = (total + limit - 1) // limit
 
     for a in atas:
         a["protocolo"] = formatar_protocolo(a["id"])
@@ -36,21 +52,39 @@ def secretaria():
         "FINALIZADO": 0
     }
 
-    for a in atas:
-        status = a["status"]
-        stats[status] = stats.get(status, 0) + 1
+    cur.execute("""
+    SELECT status, COUNT(*) as total
+    FROM atas_saida
+    WHERE unidade_atual_id=%s
+    GROUP BY status
+    """, (session["unidade_id"],))
+
+    stats_db = cur.fetchall()
+
+    stats = {
+    "PENDENTE": 0,
+    "EM_ATENDIMENTO": 0,
+    "AGUARDANDO_COORD": 0,
+    "RETORNADO_SECRETARIA": 0,
+    "FINALIZADO": 0
+    }
+
+    for row in stats_db:
+        stats[row["status"]] = row["total"]
 
     cur.close()
     db.close()
 
     return render_template(
-        "secretaria.html",
-        atas=atas,
-        tipos=None,
-        STATUS=STATUS,
-        stats=stats,
-        role=session["role"]
-    )
+    "secretaria.html",
+    atas=atas,
+    tipos=None,
+    STATUS=STATUS,
+    stats=stats,
+    role=session["role"],
+    page=page,
+    total_pages=total_pages
+)
 
 
 # ---------------- ATENDER ----------------
@@ -318,3 +352,30 @@ def enviar_coord(id):
     db.close()
 
     return redirect("/secretaria")
+
+
+# ---------------- API AUTO UPDATE ----------------
+@secretaria_bp.route("/secretaria/api")
+def secretaria_api():
+    if session.get("role") not in ["secretaria", "unit_admin", "admin"]:
+        return {"error": "Sem permissão"}, 403
+
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute("""
+        SELECT * FROM atas_saida
+        WHERE unidade_atual_id=%s
+        ORDER BY id DESC
+        LIMIT 20
+    """, (session["unidade_id"],))
+
+    atas = cur.fetchall()
+
+    for a in atas:
+        a["protocolo"] = formatar_protocolo(a["id"])
+
+    cur.close()
+    db.close()
+
+    return {"atas": atas}

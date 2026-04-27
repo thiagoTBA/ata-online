@@ -88,14 +88,12 @@ button {
   <input name="nome" placeholder="Nome" required>
 
   {% if session["role"] == "admin" %}
-    <select name="unidade_id">
-      {% for un in unidades %}
-        <option value="{{ un[0] }}">{{ un[1] }}</option>
-      {% endfor %}
-    </select>
-  {% else %}
-    <input type="hidden" name="unidade_id" value="{{ session['unidade_id'] }}">
-  {% endif %}
+<select name="unidade_id">
+  {% for un in unidades %}
+    <option value="{{ un[0] }}">{{ un[1] }}</option>
+  {% endfor %}
+</select>
+{% endif %}
 
   <select name="role">
     <option value="user">👤 User</option>
@@ -141,15 +139,18 @@ button {
 </tr>
 
 {% for u in users %}
-<tr>
+
 
 <!-- 🔥 FORM DE UPDATE -->
+ <tr>
+  <td>
 <form method="POST">
+  <tr>
   <td>{{ u[0] }}</td>
 
   <td>
     {{ u[1] }}<br>
-
+     <span>Total: {{ total }} usuários</span>
     {% if u[2] == 'admin' %}
       <span class="badge admin">Admin</span>
     {% elif u[2] == 'unit_admin' %}
@@ -212,6 +213,25 @@ button {
 </tr>
 {% endfor %}
 </table>
+<div style="margin-top:20px; display:flex; gap:15px; align-items:center;">
+
+  {% if page > 1 %}
+    <a href="?page={{ page - 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
+      ⬅️ Anterior
+    </a>
+  {% endif %}
+
+  <span>
+    Página <b>{{ page }}</b> de <b>{{ total_pages }}</b>
+  </span>
+
+  {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
+      Próxima ➡️
+    </a>
+  {% endif %}
+
+</div>
 
 </div>
 <div style="margin-bottom:10px;">
