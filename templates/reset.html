@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --primary:#2563eb;
+  --bg1:#020617;
+  --bg2:#1e293b;
+  --bg3:#2563eb;
+}
+
+body{
+  margin:0;
+  font-family:system-ui;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+
+.card{
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
+  padding:30px;
+  border-radius:20px;
+  width:90%;
+  max-width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+
+a{
+  display:block;
+  margin-top:15px;
+  padding:12px;
+  border-radius:10px;
+  text-align:center;
+  background:var(--primary);
+  color:white;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+small{
+  display:block;
+  margin-top:10px;
+  color:#cbd5f5;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>🔐 Recuperação de senha</h2>
+
+<p>Use o link abaixo para redefinir sua senha:</p>
+
+<a href="{{ link }}">Resetar senha</a>
+
+<small>⏱️ Este link expira em 1 hora</small>
+
+</div>
+
+</body>
+</html>

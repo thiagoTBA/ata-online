@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --primary:#2563eb;
+  --bg1:#020617;
+  --bg2:#1e293b;
+  --bg3:#2563eb;
+}
+
+body{
+  margin:0;
+  font-family:system-ui;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
+}
+
+.card{
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
+  padding:30px;
+  border-radius:20px;
+  width:90%;
+  max-width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05);
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  background:var(--primary);
+  border:none;
+  border-radius:10px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  box-shadow:0 5px 20px rgba(37,99,235,0.4);
+}
+
+.back{
+  margin-top:10px;
+  display:block;
+  text-align:center;
+  color:#93c5fd;
+  text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>🔑 Recuperar senha</h2>
+
+<form method="POST">
+  <input name="username" placeholder="Digite seu CPF/Login" required>
+  <button>Enviar link</button>
+</form>
+
+<a href="/login" class="back">← Voltar ao login</a>
+
+</div>
+
+</body>
+</html>
