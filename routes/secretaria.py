@@ -34,11 +34,11 @@ def secretaria():
 
     # 🔢 total de registros
     cur.execute("""
-    SELECT COUNT(*) FROM atas_saida
+    SELECT COUNT(*) as total FROM atas_saida
     WHERE unidade_atual_id=%s
     """, (session["unidade_id"],))
 
-    total = cur.fetchone()[0]
+    total = cur.fetchone()["total"]
     total_pages = (total + limit - 1) // limit
 
     for a in atas:
