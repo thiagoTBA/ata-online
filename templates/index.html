@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ATA Online</title>
+<title>Meus Requerimentos</title>
 
 <style>
 * { box-sizing: border-box; }
@@ -14,265 +14,159 @@ body {
   color:#e5e7eb;
 }
 
-/* LAYOUT */
-.layout {
-  display:flex;
-  height:100vh;
-}
-
-/* SIDEBAR */
-.sidebar {
-  width:230px;
-  background:#020617;
-  border-right:1px solid #1e293b;
+/* HEADER */
+.header {
   padding:20px;
-  display:flex;
-  flex-direction:column;
-}
-
-.sidebar h2 {
-  font-size:18px;
-  margin-bottom:20px;
-}
-
-.sidebar a {
-  color:#94a3b8;
-  text-decoration:none;
-  margin-bottom:10px;
-}
-
-.sidebar a:hover {
-  color:white;
-}
-
-/* MAIN */
-.main {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
-
-/* TOPBAR */
-.topbar {
-  padding:15px;
   border-bottom:1px solid #1e293b;
   display:flex;
   justify-content:space-between;
+  align-items:center;
 }
 
-.search {
-  padding:10px;
-  border-radius:8px;
-  border:1px solid #1e293b;
-  background:#020617;
-  color:white;
+.header h2 {
+  font-size:18px;
 }
 
-/* BOTÃO */
-.btn {
-  background:#2563eb;
-  border:none;
-  padding:10px 15px;
-  border-radius:8px;
-  color:white;
-  cursor:pointer;
+.logout {
+  color:#93c5fd;
+  text-decoration:none;
 }
 
-/* KANBAN */
-.kanban {
-  display:flex;
-  gap:15px;
-  padding:15px;
-  overflow-x:auto;
+/* CONTAINER */
+.container {
+  max-width:600px;
+  margin:auto;
+  padding:20px;
 }
 
-.col {
-  min-width:280px;
-  background:#020617;
-  border:1px solid #1e293b;
+/* BOTÃO NOVO */
+.new-btn {
+  width:100%;
+  padding:16px;
   border-radius:12px;
-  padding:10px;
-}
-
-.col h3 {
-  font-size:14px;
-  margin-bottom:10px;
-  color:#94a3b8;
+  border:none;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+  font-size:16px;
+  margin-bottom:20px;
+  cursor:pointer;
 }
 
 /* CARD */
 .card {
   background:#0f172a;
-  padding:12px;
-  border-radius:10px;
-  margin-bottom:10px;
+  padding:15px;
+  border-radius:14px;
+  margin-bottom:12px;
+  border:1px solid #1e293b;
 }
 
-.tag {
-  font-size:11px;
-  padding:4px 8px;
-  border-radius:6px;
+/* STATUS */
+.status {
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:8px;
   display:inline-block;
   margin-top:5px;
 }
 
-.p1 { background:#facc15; color:#000; }
-.p2 { background:#fb923c; color:#000; }
-.ok { background:#22c55e; color:#000; }
+.pendente { background:#facc15; color:black; }
+.andamento { background:#fb923c; color:black; }
+.finalizado { background:#22c55e; color:black; }
 
 /* MODAL */
 .modal {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:rgba(0,0,0,0.7);
   display:none;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
 }
 
-.modal-content {
+.modal-box {
   background:#020617;
   padding:20px;
   border-radius:12px;
-  width:400px;
+  width:90%;
+  max-width:400px;
 }
 
 input, select, textarea {
   width:100%;
-  padding:10px;
+  padding:12px;
   margin-top:8px;
-  background:#020617;
+  border-radius:10px;
   border:1px solid #1e293b;
+  background:#020617;
   color:white;
-  border-radius:8px;
+}
+
+button {
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="layout">
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <h2>📄 ATA</h2>
-
-  <a href="/">Requerimentos</a>
-
-  {% if role in ["secretaria","admin"] %}
-    <a href="/secretaria">Secretaria</a>
-  {% endif %}
-
-  {% if role in ["coordenacao","admin"] %}
-    <a href="/coordenacao">Coordenação</a>
-  {% endif %}
-
-  {% if role == "admin" %}
-    <a href="/admin/users">Usuários</a>
-  {% endif %}
-
-  <div style="margin-top:auto;">
-    👤 {{ username }}<br>
-    <a href="/logout">Sair</a>
-  </div>
+<div class="header">
+  <h2>📄 Meus Requerimentos</h2>
+  <a href="/logout" class="logout">Sair</a>
 </div>
 
-<!-- MAIN -->
-<div class="main">
+<div class="container">
 
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <input class="search" placeholder="Buscar aluno ou protocolo...">
-    <button class="btn" onclick="openModal()">+ Novo</button>
-  </div>
+  <button class="new-btn" onclick="openModal()">
+    + Novo Requerimento
+  </button>
 
-  <!-- KANBAN -->
-  <div class="kanban">
+  <!-- LISTA -->
+  {% for a in atas %}
+  <div class="card">
 
-    <!-- PENDENTE -->
-    <div class="col">
-      <h3>Pendente</h3>
+    <b>{{ a["aluno_nome"] }}</b><br>
+    <small>{{ a["protocolo"] }}</small>
 
-      {% for a in atas if a["status"] == "PENDENTE" %}
-      <div class="card">
-        <b>{{ a["aluno_nome"] }}</b><br>
-        <small>{{ a["protocolo"] }}</small>
-
-        <div class="tag p1">
-          {{ tipos.get(a["tipo"]) }}
-        </div>
-      </div>
-      {% endfor %}
-
+    <div>
+      📌 {{ tipos.get(a["tipo"], "Solicitação") }}
     </div>
 
-    <!-- ATENDIMENTO -->
-    <div class="col">
-      <h3>Atendimento</h3>
-
-      {% for a in atas if a["status"] == "EM_ATENDIMENTO" %}
-      <div class="card">
-        <b>{{ a["aluno_nome"] }}</b><br>
-        <small>{{ a["protocolo"] }}</small>
-
-        <div class="tag p1">
-          {{ tipos.get(a["tipo"]) }}
-        </div>
-      </div>
-      {% endfor %}
-
+    <div>
+      📅 {{ a["criado_em"] }}
     </div>
 
-    <!-- COORD -->
-    <div class="col">
-      <h3>Coordenação</h3>
+    <!-- STATUS SIMPLES -->
+    {% if a["status"] == "PENDENTE" %}
+      <div class="status pendente">Pendente</div>
+    {% elif a["status"] in ["EM_ATENDIMENTO","AGUARDANDO_COORD"] %}
+      <div class="status andamento">Em andamento</div>
+    {% elif a["status"] == "FINALIZADO" %}
+      <div class="status finalizado">Finalizado</div>
+    {% endif %}
 
-      {% for a in atas if a["status"] in ["AGUARDANDO_COORD","RETORNADO_SECRETARIA"] %}
-      <div class="card">
-        <b>{{ a["aluno_nome"] }}</b><br>
-        <small>{{ a["protocolo"] }}</small>
-
-        <div class="tag p2">
-          {{ tipos.get(a["tipo"]) }}
-        </div>
+    {% if a["status"] == "FINALIZADO" %}
+      <div style="margin-top:8px;">
+        <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 Baixar resultado</a>
       </div>
-      {% endfor %}
-
-    </div>
-
-    <!-- FINALIZADO -->
-    <div class="col">
-      <h3>Finalizado</h3>
-
-      {% for a in atas if a["status"] == "FINALIZADO" %}
-      <div class="card">
-        <b>{{ a["aluno_nome"] }}</b><br>
-        <small>{{ a["protocolo"] }}</small>
-
-        <div class="tag ok">
-          {{ tipos.get(a["tipo"]) }}
-        </div>
-
-        <div style="margin-top:5px;">
-          <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 PDF</a>
-        </div>
-      </div>
-      {% endfor %}
-
-    </div>
+    {% endif %}
 
   </div>
-
-</div>
+  {% endfor %}
 
 </div>
 
 <!-- MODAL -->
 <div class="modal" id="modal">
-  <div class="modal-content">
+  <div class="modal-box">
 
     <h3>Novo requerimento</h3>
 
@@ -283,34 +177,16 @@ input, select, textarea {
       <input name="email" placeholder="Email">
       <input name="telefone" placeholder="Telefone">
 
-      <input name="curso" placeholder="Curso">
-      <input name="rg" placeholder="RG">
-
-      <select name="sexo">
-        <option value="">Sexo</option>
-        <option value="M">M</option>
-        <option value="F">F</option>
-      </select>
-
-      <select name="turno">
-        <option value="">Turno</option>
-        <option value="manha">Manhã</option>
-        <option value="tarde">Tarde</option>
-        <option value="noite">Noite</option>
-      </select>
-
-      <input name="projeto" placeholder="Projeto">
-
-      <select name="tipo">
+      <select name="tipo" required>
         {% for k, v in tipos.items() %}
           <option value="{{ k }}">{{ v }}</option>
         {% endfor %}
       </select>
 
       <input type="file" name="anexo">
-      <textarea name="justificativa" placeholder="Justificativa"></textarea>
+      <textarea name="justificativa" placeholder="Descreva seu pedido"></textarea>
 
-      <button class="btn">Criar</button>
+      <button>Criar</button>
 
     </form>
 
