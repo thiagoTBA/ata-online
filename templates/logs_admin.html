@@ -1,43 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <title>Logs Gerais</title>
 
 <style>
-body {
-  font-family: system-ui;
-  background:#020617;
-  color:white;
+:root{
+  --bg:#020617;
+  --card:#111827;
+  --soft:#1f2937;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+
+  --green:#22c55e;
+  --blue:#3b82f6;
+  --red:#ef4444;
+  --purple:#8b5cf6;
 }
 
-.container {
-  max-width:1000px;
+body{
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
+  margin:0;
+}
+
+/* CONTAINER */
+.container{
+  max-width:1100px;
   margin:auto;
-  padding:20px;
+  padding:25px;
 }
 
-.card {
-  background:#1e293b;
-  padding:15px;
+/* HEADER */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.header h2{
+  margin:0;
+}
+
+/* NAV */
+.nav{
+  margin-bottom:20px;
+}
+
+.nav a{
+  color:#60a5fa;
+  text-decoration:none;
+  margin-right:10px;
+}
+
+/* LOG CARD */
+.log-card{
+  background:var(--card);
+  border-radius:12px;
+  padding:18px;
+  margin-bottom:12px;
+  box-shadow:0 0 0 1px #111;
+  transition:0.2s;
+}
+
+.log-card:hover{
+  background:var(--soft);
+}
+
+/* TOP */
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   margin-bottom:10px;
-  border-radius:10px;
 }
 
-.tag {
-  padding:4px 8px;
-  border-radius:6px;
+/* USER */
+.user{
+  font-weight:bold;
+}
+
+/* TAG */
+.tag{
+  padding:5px 10px;
+  border-radius:999px;
   font-size:12px;
-  display:inline-block;
-  margin-left:5px;
+  font-weight:bold;
 }
 
-.login { background:#22c55e; }
-.acao { background:#3b82f6; }
-.erro { background:#ef4444; }
+.tag.login{ background:rgba(34,197,94,0.2); color:#4ade80;}
+.tag.acao{ background:rgba(59,130,246,0.2); color:#60a5fa;}
+.tag.erro{ background:rgba(239,68,68,0.2); color:#f87171;}
 
-small {
-  color:#94a3b8;
+/* INFO GRID */
+.info{
+  display:grid;
+  gap:6px;
+  font-size:14px;
+  margin-top:10px;
+}
+
+/* TIME */
+.time{
+  font-size:12px;
+  color:var(--muted);
+  text-align:right;
+  margin-top:10px;
+}
+
+/* EMPTY */
+.empty{
+  color:var(--muted);
 }
 </style>
 </head>
@@ -46,34 +121,42 @@ small {
 
 <div class="container">
 
-<h2>🌐 Logs Gerais (Admin)</h2>
+<div class="header">
+  <h2>🌐 Logs Gerais (Admin)</h2>
+</div>
 
-<div style="margin-bottom:10px;">
-  <a href="/">🏠 Início</a> |
+<div class="nav">
+  <a href="/">🏠 Início</a>
   <a href="/admin/logs_unidade">🏢 Logs Unidade</a>
 </div>
 
 {% for log in logs %}
-<div class="card">
+<div class="log-card">
 
-  <b>👤 {{ log.username or "Sistema" }}</b>
-  <span class="tag acao">{{ log.acao }}</span>
+  <div class="top">
+    <div class="user">
+      👤 {{ log.username or "Sistema" }}
+    </div>
 
-  <div style="margin-top:5px;">
-    🏢 {{ log.unidade }}
+    <div class="tag acao">
+      {{ log.acao }}
+    </div>
   </div>
 
-  <div style="margin-top:5px;">
-    📄 {{ log.detalhes }}
+  <div class="info">
+    <div>🏢 <b>{{ log.unidade }}</b></div>
+    <div>📄 {{ log.detalhes }}</div>
   </div>
 
-  <small>⏱️ {{ log.criado_em }}</small>
+  <div class="time">
+    ⏱️ {{ log.criado_em }}
+  </div>
 
 </div>
 {% endfor %}
 
 {% if not logs %}
-  <p>Nenhum log encontrado.</p>
+  <p class="empty">Nenhum log encontrado.</p>
 {% endif %}
 
 </div>
