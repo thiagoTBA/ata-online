@@ -190,13 +190,7 @@ def esqueci_senha():
         # 🔥 resposta (sem email por enquanto)
         return render_template("reset_link.html", token=token)
 
-    return """
-    <h3>Esqueci minha senha</h3>
-    <form method="POST">
-        <input name="username" placeholder="Usuário" required>
-        <button>Recuperar senha</button>
-    </form>
-    """
+    return render_template("esqueci.html")
 @auth_bp.route("/reset/<token>", methods=["GET", "POST"])
 def reset_senha(token):
     db = get_db()
@@ -210,9 +204,13 @@ def reset_senha(token):
     user = cur.fetchone()
 
     if not user:
+        cur.close()
+        db.close()
         return "Token inválido", 400
 
     if datetime.now() > user[1]:
+        cur.close()
+        db.close()
         return "Token expirado", 400
 
     if request.method == "POST":
@@ -240,4 +238,4 @@ def reset_senha(token):
 
         return redirect("/login")
 
-    return render_template("esqueci.html")
+    return render_template("nova_senha.html", token=token)

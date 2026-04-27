@@ -32,22 +32,30 @@ body{
   box-shadow:0 20px 60px rgba(0,0,0,0.4);
 }
 
-a{
-  display:block;
-  margin-top:15px;
+input{
+  width:100%;
   padding:12px;
+  margin-top:10px;
   border-radius:10px;
-  text-align:center;
-  background:var(--primary);
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05);
   color:white;
-  text-decoration:none;
-  font-weight:bold;
 }
 
-small{
-  display:block;
-  margin-top:10px;
-  color:#cbd5f5;
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  background:var(--primary);
+  border:none;
+  border-radius:10px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  box-shadow:0 5px 20px rgba(37,99,235,0.4);
 }
 </style>
 </head>
@@ -56,13 +64,12 @@ small{
 
 <div class="card">
 
-<h2>🔐 Recuperação de senha</h2>
+<h2>🔒 Nova senha</h2>
 
-<p>Use o link abaixo para redefinir sua senha:</p>
-
-<a href="/reset/{{ token }}">Resetar senha</a>
-
-<small>⏱️ Este link expira em 1 hora</small>
+<form method="POST">
+  <input type="password" name="nova" placeholder="Digite a nova senha" required>
+  <button>Salvar nova senha</button>
+</form>
 
 </div>
 
