@@ -188,12 +188,7 @@ def esqueci_senha():
         }
 
         # 🔥 resposta (sem email por enquanto)
-        return f"""
-        <h3>🔑 Recuperação de senha</h3>
-        <p>Use o link abaixo:</p>
-        <p><a href="/reset/{token}">Resetar senha</a></p>
-        <p>⏳ Este link expira em 1 hora</p>
-        """
+        return render_template("reset_link.html", token=token)
 
     return """
     <h3>Esqueci minha senha</h3>
@@ -245,10 +240,4 @@ def reset_senha(token):
 
         return redirect("/login")
 
-    return """
-    <h3>🔑 Nova senha</h3>
-    <form method="POST">
-        <input type="password" name="nova" placeholder="Nova senha" required>
-        <button>Atualizar senha</button>
-    </form>
-    """
+    return render_template("esqueci.html")
