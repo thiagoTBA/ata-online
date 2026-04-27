@@ -88,18 +88,47 @@ button {
   border-radius: 10px;
   font-size: 14px;
   z-index: 9999;
-  animation: fadeIn .3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .p1 { background:#facc15; color:#000; }
 .p2 { background:#fb923c; color:#000; }
 .ok { background:#22c55e; color:#000; }
 .no { background:#ef4444; color:#fff; }
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  font-size: 28px;
+  border: none;
+  cursor: pointer;
+}
+
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: #020617;
+  padding: 20px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
 </style>
 </head>
 
@@ -115,68 +144,17 @@ button {
 
 <div class="container">
 
-<!-- FORM -->
-<div class="card">
-<form method="POST" action="/add" enctype="multipart/form-data">
-
-  <h3>Dados do aluno</h3>
-
-  <input name="aluno_nome" placeholder="Nome do aluno" required>
-  <input name="cpf" id="cpf" placeholder="CPF" required>
-  <input name="email" id="email" type="email" placeholder="Email" required>
-  <input name="telefone" id="telefone" placeholder="Telefone" required>
-  <input name="curso" placeholder="Curso">
-  <input name="rg" placeholder="RG">
-
-  <h3>Acadêmico</h3>
-
-  <select name="sexo">
-    <option value="">Sexo</option>
-    <option value="M">Masculino</option>
-    <option value="F">Feminino</option>
-  </select>
-
-  <select name="turno">
-    <option value="">Turno</option>
-    <option value="manha">Manhã</option>
-    <option value="tarde">Tarde</option>
-    <option value="noite">Noite</option>
-  </select>
-
-  <h3>Solicitação</h3>
-
-  <input name="projeto" placeholder="Projeto">
-
-  <select name="tipo" required>
-    <option value="">Tipo de solicitação</option>
-    {% for k, v in tipos.items() %}
-      <option value="{{ k }}">{{ v }}</option>
-    {% endfor %}
-  </select>
-
-  <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
-
-  <textarea name="justificativa" placeholder="Justificativa"></textarea>
-
-  <button>Criar Requerimento</button>
-
-</form>
-</div>
-
-<!-- LISTA -->
 {% for a in atas %}
 <div class="card">
 
-  <b>{{ a["aluno_nome"] }}</b><br>
-
-  {% if a["protocolo"] %}
-    <div class="tag ok">{{ a["protocolo"] }}</div>
-  {% endif %}
-
-  <div class="tag p2">
-    {{ tipos.get(a["tipo"], "Desconhecido") }}
+  <div style="display:flex; justify-content:space-between;">
+    <b>👤 {{ a["aluno_nome"] }}</b>
+    {% if a["protocolo"] %}
+      <span class="tag ok">📄 {{ a["protocolo"] }}</span>
+    {% endif %}
   </div>
 
+  <div class="tag p2">📌 {{ tipos.get(a["tipo"], "Desconhecido") }}</div>
   <div>📅 {{ a["criado_em"] }}</div>
 
   {% if a["status"] == "PENDENTE" %}
@@ -189,8 +167,15 @@ button {
     <div class="tag ok">Finalizado</div>
   {% endif %}
 
+  <div style="margin-top:10px;">
+    📌 Criado<br>
+    {% if a["status"] != "PENDENTE" %}🟡 Atendido<br>{% endif %}
+    {% if a["status"] in ["AGUARDANDO_COORD","FINALIZADO"] %}🟠 Coordenação<br>{% endif %}
+    {% if a["status"] == "FINALIZADO" %}🟢 Finalizado{% endif %}
+  </div>
+
   {% if a["status"] == "FINALIZADO" %}
-    <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 Baixar</a>
+    <a href="/processo/{{ a['id'] }}/pdf">📄 Baixar</a>
   {% endif %}
 
 </div>
@@ -198,146 +183,83 @@ button {
 
 </div>
 
-<!-- SCRIPT -->
+<!-- BOTÃO -->
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+
+    <h3>Novo Requerimento</h3>
+
+    <form method="POST" action="/add" enctype="multipart/form-data" id="form">
+
+      <input name="aluno_nome" placeholder="Nome" required>
+      <input name="cpf" id="cpf" placeholder="CPF" required>
+      <input name="email" id="email" placeholder="Email" required>
+      <input name="telefone" id="telefone" placeholder="Telefone" required>
+
+      <input name="curso" placeholder="Curso">
+      <input name="rg" placeholder="RG">
+
+      <select name="sexo">
+        <option value="">Sexo</option>
+        <option value="M">M</option>
+        <option value="F">F</option>
+      </select>
+
+      <select name="turno">
+        <option value="">Turno</option>
+        <option value="manha">Manhã</option>
+        <option value="tarde">Tarde</option>
+        <option value="noite">Noite</option>
+      </select>
+
+      <input name="projeto" placeholder="Projeto">
+
+      <select name="tipo">
+        {% for k, v in tipos.items() %}
+          <option value="{{ k }}">{{ v }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="file" name="anexo">
+      <textarea name="justificativa"></textarea>
+
+      <button id="btn">Criar</button>
+
+    </form>
+
+  </div>
+</div>
+
 <script>
-// ================= UTIL =================
-function setError(input, msg) {
-  let el = input.nextElementSibling;
-  if (!el || !el.classList.contains("error")) {
-    el = document.createElement("div");
-    el.className = "error";
-    input.after(el);
-  }
-  el.innerText = msg;
-  input.style.border = "1px solid #ef4444";
+// modal
+function openModal(){document.getElementById("modal").style.display="flex";}
+window.onclick=e=>{if(e.target.id==="modal")modal.style.display="none";}
+
+// toast
+function toast(msg){
+ let t=document.createElement("div");
+ t.className="toast";
+ t.innerText=msg;
+ document.body.appendChild(t);
+ setTimeout(()=>t.remove(),3000);
 }
 
-function clearError(input) {
-  let el = input.nextElementSibling;
-  if (el && el.classList.contains("error")) {
-    el.remove();
-  }
-  input.style.border = "1px solid #22c55e";
+// sucesso
+if(new URLSearchParams(window.location.search).get("success")){
+ toast("Requerimento enviado com sucesso");
+ history.replaceState({},document.title,"/");
 }
 
-// ================= CPF =================
-function validarCPF(cpf) {
-  cpf = cpf.replace(/\D/g, '');
-  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+// loading
+const form=document.getElementById("form");
+const btn=document.getElementById("btn");
 
-  let soma = 0;
-  for (let i = 0; i < 9; i++)
-    soma += parseInt(cpf[i]) * (10 - i);
-
-  let resto = (soma * 10) % 11;
-  if (resto === 10) resto = 0;
-  if (resto !== parseInt(cpf[9])) return false;
-
-  soma = 0;
-  for (let i = 0; i < 10; i++)
-    soma += parseInt(cpf[i]) * (11 - i);
-
-  resto = (soma * 10) % 11;
-  if (resto === 10) resto = 0;
-
-  return resto === parseInt(cpf[10]);
-}
-
-// ================= INPUTS =================
-const cpf = document.getElementById("cpf");
-const email = document.getElementById("email");
-const tel = document.getElementById("telefone");
-
-// CPF máscara + validação
-cpf.addEventListener("input", () => {
-  let v = cpf.value.replace(/\D/g, "").slice(0,11);
-  v = v.replace(/(\d{3})(\d)/, "$1.$2");
-  v = v.replace(/(\d{3})(\d)/, "$1.$2");
-  v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  cpf.value = v;
-
-  if (v.length === 14) {
-    validarCPF(v) ? clearError(cpf) : setError(cpf, "CPF inválido");
-  }
-});
-
-// EMAIL
-email.addEventListener("input", () => {
-  let valido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
-  valido ? clearError(email) : setError(email, "Email inválido");
-});
-
-// TELEFONE
-tel.addEventListener("input", () => {
-  let v = tel.value.replace(/\D/g, "").slice(0,11);
-
-  if (v.length > 10) {
-    v = v.replace(/(\d{2})(\d)/, "($1) $2");
-    v = v.replace(/(\d{5})(\d)/, "$1-$2");
-  } else {
-    v = v.replace(/(\d{2})(\d)/, "($1) $2");
-    v = v.replace(/(\d{4})(\d)/, "$1-$2");
-  }
-
-  tel.value = v;
-
-  if (v.length < 14) {
-    setError(tel, "Telefone incompleto");
-  } else {
-    clearError(tel);
-  }
-});
-
-// ================= SUBMIT =================
-document.querySelector("form").addEventListener("submit", function(e) {
-  let erros = [];
-
-  if (!validarCPF(cpf.value)) {
-    setError(cpf, "CPF inválido");
-    erros.push(cpf);
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    setError(email, "Email inválido");
-    erros.push(email);
-  }
-
-  if (tel.value.length < 14) {
-    setError(tel, "Telefone inválido");
-    erros.push(tel);
-  }
-
-  if (erros.length > 0) {
-    e.preventDefault();
-
-    erros[0].scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-  }
-});
-
-// ===== TOAST =====
-function showToast(msg) {
-  const t = document.createElement("div");
-  t.className = "toast";
-  t.innerText = msg;
-
-  document.body.appendChild(t);
-
-  setTimeout(() => {
-    t.remove();
-  }, 3000);
-}
-
-// ===== FORM =====
-const form = document.querySelector("form");
-const btn = form.querySelector("button");
-
-form.addEventListener("submit", function() {
-  // loading
-  btn.disabled = true;
-  btn.innerText = "Enviando...";
+form.addEventListener("submit",()=>{
+ btn.disabled=true;
+ btn.innerText="Enviando...";
 });
 </script>
 

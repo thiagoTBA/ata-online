@@ -5,82 +5,189 @@
 <title>Admin - Usuários</title>
 
 <style>
-body {
-  font-family: Arial;
-  background:#f2f3f5;
+:root{
+  --bg:#0f172a;
+  --card:#111827;
+  --soft:#1f2937;
+  --primary:#3b82f6;
+  --danger:#ef4444;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
   margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
 }
 
-.container {
-  max-width:900px;
-  margin:auto;
+/* 🔥 LAYOUT */
+.layout{
+  display:flex;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;
+  background:#020617;
   padding:20px;
+  border-right:1px solid #111;
 }
 
-table {
+.sidebar a{
+  display:block;
+  color:var(--muted);
+  text-decoration:none;
+  margin-bottom:12px;
+  padding:10px;
+  border-radius:8px;
+}
+
+.sidebar a:hover{
+  background:var(--soft);
+  color:white;
+}
+
+/* CONTENT */
+.content{
+  flex:1;
+  padding:25px;
+}
+
+/* HEADER */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+}
+
+.title{
+  font-size:22px;
+  font-weight:bold;
+}
+
+/* CARD */
+.card{
+  background:var(--card);
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:20px;
+  box-shadow:0 0 0 1px #111;
+}
+
+/* FORM */
+input, select{
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #222;
+  background:#020617;
+  color:white;
+  margin-right:10px;
+}
+
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:500;
+}
+
+.btn-primary{
+  background:var(--primary);
+  color:white;
+}
+
+.btn-danger{
+  background:var(--danger);
+  color:white;
+}
+
+.btn-secondary{
+  background:#374151;
+  color:white;
+}
+
+/* TABLE */
+table{
   width:100%;
   border-collapse:collapse;
-  background:white;
-  border-radius:10px;
-  overflow:hidden;
 }
 
-th, td {
-  padding:10px;
+th{
+  text-align:left;
+  font-size:13px;
+  color:var(--muted);
+  padding:12px;
+  border-bottom:1px solid #222;
 }
 
-th {
-  background:#111827;
-  color:white;
+td{
+  padding:14px 12px;
+  border-bottom:1px solid #111;
 }
 
-tr {
-  border-bottom:1px solid #eee;
+tr:hover{
+  background:rgba(255,255,255,0.03);
 }
 
-select {
-  padding:6px;
-  border-radius:6px;
-}
-
-button {
-  padding:6px 10px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.btn-save {
-  background:#2563eb;
-  color:white;
-}
-
-.btn-delete {
-  background:#ef4444;
-  color:white;
-  margin-top:5px;
-}
-
-.badge {
-  padding:3px 6px;
+/* BADGES */
+.badge{
+  padding:4px 8px;
   border-radius:6px;
   font-size:12px;
 }
 
-.admin { background:#fee2e2; color:#b91c1c; }
-.unit { background:#fef3c7; color:#b45309; }
-.user { background:#e0f2fe; color:#0369a1; }
-.coord { background:#e0e7ff; color:#3730a3; }
-.secre { background:#dcfce7; color:#166534; }
+.admin{background:#7f1d1d;}
+.unit{background:#78350f;}
+.user{background:#1e3a8a;}
+.coord{background:#312e81;}
+.secre{background:#14532d;}
+
+/* PAGINAÇÃO */
+.pagination{
+  margin-top:20px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+a{
+  color:#60a5fa;
+  text-decoration:none;
+}
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="layout">
 
-<h2>👥 Usuários</h2>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h3>⚙️ Admin</h3>
+  <a href="/">🏠 Início</a>
+  <a href="/secretaria">🏢 Secretaria</a>
+  <a href="/coordenacao">🎓 Coordenação</a>
+  <a href="/admin/logs">🌐 Logs</a>
+</div>
 
+<!-- CONTENT -->
+<div class="content">
+
+<div class="header">
+  <div class="title">👥 Gestão de Usuários</div>
+</div>
+
+<!-- CRIAR USUARIO -->
+<div class="card">
 <h3>➕ Criar Usuário</h3>
 
 <form method="POST" action="/admin/create_full_user">
@@ -88,27 +195,30 @@ button {
   <input name="nome" placeholder="Nome" required>
 
   {% if session["role"] == "admin" %}
-<select name="unidade_id">
-  {% for un in unidades %}
-    <option value="{{ un[0] }}">{{ un[1] }}</option>
-  {% endfor %}
-</select>
-{% endif %}
+  <select name="unidade_id">
+    {% for un in unidades %}
+      <option value="{{ un[0] }}">{{ un[1] }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
 
   <select name="role">
-    <option value="user">👤 User</option>
-    <option value="secretaria">🏢 Secretaria</option>
-    <option value="coordenacao">🎓 Coordenação</option>
+    <option value="user">User</option>
+    <option value="secretaria">Secretaria</option>
+    <option value="coordenacao">Coordenação</option>
 
     {% if session["role"] == "admin" %}
-      <option value="unit_admin">🧑‍💼 Admin Unidade</option>
-      <option value="admin">🔥 Admin</option>
+      <option value="unit_admin">Admin Unidade</option>
+      <option value="admin">Admin</option>
     {% endif %}
   </select>
 
-  <button>Criar</button>
+  <button class="btn-primary">Criar</button>
 </form>
+</div>
 
+<!-- FILTRO -->
+<div class="card">
 <form method="GET">
   <input name="q" placeholder="Buscar usuário">
 
@@ -126,8 +236,12 @@ button {
     {% endfor %}
   </select>
 
-  <button>Filtrar</button>
+  <button class="btn-secondary">Filtrar</button>
 </form>
+</div>
+
+<!-- TABELA -->
+<div class="card">
 
 <table>
 <tr>
@@ -139,106 +253,100 @@ button {
 </tr>
 
 {% for u in users %}
+<tr>
 
-
-<!-- 🔥 FORM DE UPDATE -->
- <tr>
-  <td>
 <form method="POST">
-  <tr>
-  <td>{{ u[0] }}</td>
 
-  <td>
-    {{ u[1] }}<br>
-     <span>Total: {{ total }} usuários</span>
-    {% if u[2] == 'admin' %}
-      <span class="badge admin">Admin</span>
-    {% elif u[2] == 'unit_admin' %}
-      <span class="badge unit">Admin Unidade</span>
-    {% elif u[2] == 'secretaria' %}
-      <span class="badge secre">Secretaria</span>
-    {% elif u[2] == 'coordenacao' %}
-      <span class="badge coord">Coordenação</span>
-    {% else %}
-      <span class="badge user">User</span>
-    {% endif %}
-  </td>
+<td>{{ u[0] }}</td>
 
-  <td>
-    {% if session["role"] == "admin" %}
-      <select name="unidade_id">
-        {% for un in unidades %}
-          <option value="{{ un[0] }}" {% if un[0]==u[4] %}selected{% endif %}>
-            {{ un[1] }}
-          </option>
-        {% endfor %}
-      </select>
-    {% else %}
-      {{ u[4] }}
-      <input type="hidden" name="unidade_id" value="{{ u[4] }}">
-    {% endif %}
-  </td>
+<td>
+  {{ u[1] }} <br>
+  <small style="color:gray">Total: {{ total }} usuários</small><br>
 
-  <td>
-    <select name="role">
-      <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
-      <option value="secretaria" {% if u[2]=='secretaria' %}selected{% endif %}>Secretaria</option>
-      <option value="coordenacao" {% if u[2]=='coordenacao' %}selected{% endif %}>Coordenação</option>
-      <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>Admin Unidade</option>
+  {% if u[2] == 'admin' %}
+    <span class="badge admin">Admin</span>
+  {% elif u[2] == 'unit_admin' %}
+    <span class="badge unit">Admin Unidade</span>
+  {% elif u[2] == 'secretaria' %}
+    <span class="badge secre">Secretaria</span>
+  {% elif u[2] == 'coordenacao' %}
+    <span class="badge coord">Coordenação</span>
+  {% else %}
+    <span class="badge user">User</span>
+  {% endif %}
+</td>
 
-      {% if session["role"] == "admin" %}
-      <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>Admin</option>
-      {% endif %}
-    </select>
-  </td>
+<td>
+  {% if session["role"] == "admin" %}
+  <select name="unidade_id">
+    {% for un in unidades %}
+      <option value="{{ un[0] }}" {% if un[0]==u[4] %}selected{% endif %}>
+        {{ un[1] }}
+      </option>
+    {% endfor %}
+  </select>
+  {% else %}
+    {{ u[4] }}
+    <input type="hidden" name="unidade_id" value="{{ u[4] }}">
+  {% endif %}
+</td>
 
-  <td>
-    <input type="hidden" name="user_id" value="{{ u[0] }}">
-    <button class="btn-save">Salvar</button>
+<td>
+<select name="role">
+  <option value="user" {% if u[2]=='user' %}selected{% endif %}>User</option>
+  <option value="secretaria" {% if u[2]=='secretaria' %}selected{% endif %}>Secretaria</option>
+  <option value="coordenacao" {% if u[2]=='coordenacao' %}selected{% endif %}>Coordenação</option>
+  <option value="unit_admin" {% if u[2]=='unit_admin' %}selected{% endif %}>Admin Unidade</option>
+
+  {% if session["role"] == "admin" %}
+  <option value="admin" {% if u[2]=='admin' %}selected{% endif %}>Admin</option>
+  {% endif %}
+</select>
+</td>
+
+<td>
+  <input type="hidden" name="user_id" value="{{ u[0] }}">
+  <button class="btn-primary">Salvar</button>
 </form>
 
-    <!-- 🔑 RESET (AGORA CERTO) -->
-    <form method="POST" action="/admin/reset_password/{{ u[0] }}">
-      <button class="btn-save">🔑 Reset</button>
-    </form>
+<form method="POST" action="/admin/reset_password/{{ u[0] }}">
+  <button class="btn-secondary">🔑 Reset</button>
+</form>
 
-    {% if session["role"] == "admin" %}
-    <form method="POST" action="/admin/delete_user/{{ u[0] }}">
-      <button class="btn-delete">Excluir</button>
-    </form>
-    {% endif %}
+{% if session["role"] == "admin" %}
+<form method="POST" action="/admin/delete_user/{{ u[0] }}">
+  <button class="btn-danger">Excluir</button>
+</form>
+{% endif %}
 
-  </td>
+</td>
 
 </tr>
 {% endfor %}
 </table>
-<div style="margin-top:20px; display:flex; gap:15px; align-items:center;">
 
-  {% if page > 1 %}
-    <a href="?page={{ page - 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
-      ⬅️ Anterior
-    </a>
-  {% endif %}
+<!-- PAGINAÇÃO -->
+<div class="pagination">
 
-  <span>
-    Página <b>{{ page }}</b> de <b>{{ total_pages }}</b>
-  </span>
+{% if page > 1 %}
+<a href="?page={{ page - 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
+⬅️ Anterior
+</a>
+{% endif %}
 
-  {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
-      Próxima ➡️
-    </a>
-  {% endif %}
+<span>Página <b>{{ page }}</b> de <b>{{ total_pages }}</b></span>
+
+{% if page < total_pages %}
+<a href="?page={{ page + 1 }}&q={{ request.args.get('q','') }}&role={{ request.args.get('role','') }}&unidade={{ request.args.get('unidade','') }}">
+Próxima ➡️
+</a>
+{% endif %}
+
+</div>
 
 </div>
 
 </div>
-<div style="margin-bottom:10px;">
-  <a href="/">🏠 Início</a> |
-  <a href="/secretaria">🏢 Secretaria</a> |
-  <a href="/coordenacao">🎓 Coordenação</a>
-  <a href="/admin/logs">🌐 Logs Gerais</a>
 </div>
 
 </body>
