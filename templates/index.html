@@ -129,6 +129,62 @@ button {
   max-height: 90vh;
   overflow-y: auto;
 }
+
+.timeline {
+  margin-top:15px;
+  padding-left:15px;
+  border-left:2px solid #1e293b;
+}
+
+.step {
+  margin-bottom:10px;
+  position:relative;
+  padding-left:10px;
+}
+
+.step::before {
+  content:"";
+  position:absolute;
+  left:-17px;
+  top:4px;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#475569;
+}
+
+.step.done::before {
+  background:#22c55e;
+}
+
+.step.active::before {
+  background:#3b82f6;
+  box-shadow:0 0 0 4px rgba(59,130,246,0.2);
+}
+
+.step span {
+  font-size:13px;
+  color:#94a3b8;
+}
+
+.result-box {
+  margin-top:10px;
+  padding:12px;
+  background:#020617;
+  border-left:3px solid #2563eb;
+  border-radius:8px;
+}
+
+.toggle-btn {
+  margin-top:10px;
+  font-size:13px;
+  cursor:pointer;
+  color:#60a5fa;
+}
+
+.hidden {
+  display:none;
+}
 </style>
 </head>
 
@@ -167,16 +223,26 @@ button {
     <div class="tag ok">Finalizado</div>
   {% endif %}
 
-  <div style="margin-top:10px;">
-    📌 Criado<br>
-    {% if a["status"] != "PENDENTE" %}🟡 Atendido<br>{% endif %}
-    {% if a["status"] in ["AGUARDANDO_COORD","FINALIZADO"] %}🟠 Coordenação<br>{% endif %}
-    {% if a["status"] == "FINALIZADO" %}🟢 Finalizado{% endif %}
+  <!-- TIMELINE -->
+<div class="timeline">
+
+  <div class="step done">📌 Criado</div>
+
+  <div class="step {% if a['status'] != 'PENDENTE' %}done{% endif %}">
+    🟡 Atendido
   </div>
 
-  {% if a["status"] == "FINALIZADO" %}
-    <a href="/processo/{{ a['id'] }}/pdf">📄 Baixar</a>
-  {% endif %}
+  <div class="step {% if a['status'] in ['AGUARDANDO_COORD','FINALIZADO'] %}done{% endif %}">
+    🟠 Coordenação
+  </div>
+
+  <div class="step {% if a['status'] == 'FINALIZADO' %}done active{% endif %}">
+    🟢 Finalizado
+  </div>
+
+</div>
+
+ {% if a["status"] == "FINALIZADO" %}
 
 </div>
 {% endfor %}
@@ -261,6 +327,11 @@ form.addEventListener("submit",()=>{
  btn.disabled=true;
  btn.innerText="Enviando...";
 });
+
+function toggleDetails(id){
+  const el = document.getElementById("details-"+id);
+  el.classList.toggle("hidden");
+}
 </script>
 
 </body>
