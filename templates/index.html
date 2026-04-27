@@ -245,12 +245,11 @@ button {
 {% if a["status"] == "FINALIZADO" %}
 
   <div style="margin-top:10px;">
-    <a href="/processo/{{ a['id'] }}/pdf">📄 Baixar Processo Completo</a>
-  </div>
-
-  <div class="toggle-btn" onclick="toggleDetails('{{ a['id'] }}')">
-    👁️ Ver resultado
-  </div>
+  <a href="/processo/{{ a['id'] }}/pdf">📄 Baixar Processo Completo</a>
+</div>
+<div class="toggle-btn" data-id="{{ a['id'] }}" onclick="toggleDetails(this)">
+  👁️ Ver resultado
+</div>
 
   <div id="details-{{ a['id'] }}" class="hidden">
 
@@ -370,9 +369,15 @@ form.addEventListener("submit",()=>{
  btn.innerText="Enviando...";
 });
 
-function toggleDetails(id){
-  const el = document.getElementById("details-"+id);
-  el.classList.toggle("hidden");
+function toggleDetails(el){
+  const id = el.dataset.id;
+  const box = document.getElementById("details-"+id);
+
+  box.classList.toggle("hidden");
+
+  el.innerText = box.classList.contains("hidden")
+    ? "👁️ Ver resultado"
+    : "🙈 Ocultar resultado";
 }
 </script>
 
