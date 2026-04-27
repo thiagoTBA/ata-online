@@ -242,12 +242,54 @@ button {
 
 </div>
 
- {% if a["status"] == "FINALIZADO" %}
+{% if a["status"] == "FINALIZADO" %}
 
-</div>
+  <div style="margin-top:10px;">
+    <a href="/processo/{{ a['id'] }}/pdf">📄 Baixar Processo Completo</a>
+  </div>
+
+  <div class="toggle-btn" onclick="toggleDetails('{{ a['id'] }}')">
+    👁️ Ver resultado
+  </div>
+
+  <div id="details-{{ a['id'] }}" class="hidden">
+
+    {% if a["decisao"] %}
+      {% if a["decisao"] == "DEFERIDO" %}
+        <span class="tag ok">🟢 Deferido</span>
+      {% else %}
+        <span class="tag no">🔴 Indeferido</span>
+      {% endif %}
+    {% endif %}
+
+    {% if a["parecer"] %}
+    <div class="result-box">
+      <b>📝 Resposta:</b><br>
+      {{ a["parecer"] }}
+    </div>
+    {% endif %}
+
+    <div style="margin-top:10px; font-size:13px;">
+      {% if a["anexo_url"] %}
+        <div><a href="{{ a['anexo_url'] }}" target="_blank">📎 Arquivo enviado</a></div>
+      {% endif %}
+
+      {% if a["anexo_secretaria"] %}
+        <div><a href="{{ a['anexo_secretaria'] }}" target="_blank">📎 Secretaria</a></div>
+      {% endif %}
+
+      {% if a["anexo_coord"] %}
+        <div><a href="{{ a['anexo_coord'] }}" target="_blank">📎 Coordenação</a></div>
+      {% endif %}
+    </div>
+
+  </div>
+
+{% endif %}
+
+</div> <!-- FECHA CARD -->
+
 {% endfor %}
-
-</div>
 
 <!-- BOTÃO -->
 <button class="fab" onclick="openModal()">+</button>
