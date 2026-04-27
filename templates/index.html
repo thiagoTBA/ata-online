@@ -10,49 +10,81 @@
 body {
   margin:0;
   font-family: system-ui;
-  background:#f2f3f5;
+  background:#020617;
+  color:#e5e7eb;
 }
 
+/* HEADER */
 .header {
-  background:#111827;
-  color:white;
-  padding:15px;
-  font-weight:bold;
+  background:#020617;
+  border-bottom:1px solid #1e293b;
+  padding:15px 25px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
+.header a {
+  color:#93c5fd;
+  margin-left:10px;
+  text-decoration:none;
+}
+
+/* GRID */
 .container {
-  max-width:600px;
+  max-width:1200px;
   margin:auto;
-  padding:15px;
+  padding:20px;
+  display:grid;
+  grid-template-columns: 420px 1fr;
+  gap:20px;
 }
 
+/* CARD */
 .card {
-  background:white;
-  padding:15px;
-  margin-bottom:12px;
-  border-radius:14px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  background:#0f172a;
+  padding:20px;
+  border-radius:16px;
+  border:1px solid #1e293b;
 }
 
+/* TITULOS */
+h3 {
+  margin:10px 0;
+  font-size:14px;
+  color:#94a3b8;
+  text-transform:uppercase;
+}
+
+/* INPUTS */
 input, textarea, select {
   width:100%;
   padding:12px;
   margin-top:8px;
   border-radius:10px;
-  border:1px solid #ddd;
+  border:1px solid #1e293b;
+  background:#020617;
+  color:white;
 }
 
+/* BOTÃO */
 button {
   width:100%;
-  padding:12px;
-  margin-top:10px;
+  padding:14px;
+  margin-top:15px;
   background:#2563eb;
   color:white;
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
 }
 
+button:hover {
+  background:#1d4ed8;
+}
+
+/* TAGS */
 .tag {
   padding:5px 10px;
   border-radius:8px;
@@ -61,48 +93,82 @@ button {
   margin-top:5px;
 }
 
-.p1 { background:#fef3c7; color:#b45309; }
-.p2 { background:#fde68a; color:#92400e; }
-.ok { background:#d1fae5; color:#065f46; }
-.no { background:#fee2e2; color:#991b1b; }
+.p1 { background:#facc15; color:#000; }
+.p2 { background:#fb923c; color:#000; }
+.ok { background:#22c55e; color:#000; }
+.no { background:#ef4444; color:#fff; }
+
+/* LISTA */
+.list {
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+}
+
+.process-card {
+  padding:15px;
+  border-radius:14px;
+  background:#020617;
+  border:1px solid #1e293b;
+}
+
+.process-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.process-name {
+  font-weight:bold;
+}
+
+.process-id {
+  font-size:12px;
+  color:#94a3b8;
+}
+
+/* TIMELINE */
+.timeline {
+  margin-top:10px;
+  font-size:13px;
+  color:#94a3b8;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  📄 Requerimento.org
-  <span style="float:right">
+  <div>📄 ATA Online</div>
 
+  <div>
     {% if role in ["secretaria","unit_admin","admin"] %}
-      <a href="/secretaria">🏢 Secretaria</a>
+      <a href="/secretaria">Secretaria</a>
     {% endif %}
 
     {% if role in ["coordenacao","admin"] %}
-      <a href="/coordenacao">🎓 Coordenação</a>
+      <a href="/coordenacao">Coordenação</a>
     {% endif %}
 
     {% if role == "admin" %}
-      <a href="/admin/users">👥 Usuários</a>
-      <a href="/admin/unidades">🏢 Unidades</a>
-      <a href="/admin/logs">📊 Logs</a>
-    {% endif %}
-
-    {% if role == "unit_admin" %}
-      <a href="/admin/users">👥 Usuários</a>
+      <a href="/admin/users">Usuários</a>
+      <a href="/admin/unidades">Unidades</a>
+      <a href="/admin/logs">Logs</a>
     {% endif %}
 
     👤 {{ username }} |
     <a href="/logout">Sair</a>
-
-  </span>
+  </div>
 </div>
 
 <div class="container">
 
+<!-- FORM -->
+<div>
+
 {% if session["role"] in ["admin","unit_admin","secretaria"] %}
 <div class="card">
-  <h3>➕ Cadastrar Aluno</h3>
+  <h3>Cadastrar aluno</h3>
 
   <form method="POST" action="/admin/create_user">
     <input name="username" placeholder="Nome do aluno" required>
@@ -112,7 +178,7 @@ button {
 </div>
 
 <div class="card">
-  <h3>🔑 Trocar senha</h3>
+  <h3>Trocar senha</h3>
 
   <form method="POST" action="/change_password">
     <input type="password" name="nova" placeholder="Nova senha" required>
@@ -121,16 +187,18 @@ button {
 </div>
 {% endif %}
 
-<!-- 📌 NOVO REQUERIMENTO -->
 <div class="card">
-<form id="form-requerimento" method="POST" action="/add" enctype="multipart/form-data">
+<form method="POST" action="/add" enctype="multipart/form-data">
 
+  <h3>Dados do aluno</h3>
   <input name="aluno_nome" placeholder="Nome do aluno" required>
-  <input name="cpf" id="cpf" placeholder="CPF" required>
-  <input name="email" id="email" type="email" placeholder="Email" required>
-  <input name="telefone" id="telefone" placeholder="Telefone" required>
-  <input name="curso" placeholder="Curso">
+  <input name="cpf" placeholder="CPF" required>
+  <input name="email" type="email" placeholder="Email" required>
+  <input name="telefone" placeholder="Telefone" required>
   <input name="rg" placeholder="RG">
+
+  <h3>Acadêmico</h3>
+  <input name="curso" placeholder="Curso">
 
   <select name="sexo">
     <option value="">Sexo</option>
@@ -145,7 +213,7 @@ button {
     <option value="noite">Noite</option>
   </select>
 
-  <select name="unidade_id">
+  <h3>Solicitação</h3>
   <input name="projeto" placeholder="Projeto">
 
   <select name="tipo" required>
@@ -155,116 +223,87 @@ button {
     {% endfor %}
   </select>
 
-  <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
-
+  <input type="file" name="anexo">
   <textarea name="justificativa" placeholder="Justificativa"></textarea>
 
   <button>Criar Requerimento</button>
+
 </form>
 </div>
 
-<!-- 📋 LISTA -->
+</div>
+
+<!-- LISTA -->
+<div class="list">
+
 {% for a in atas %}
-<div class="card">
+<div class="process-card">
 
-  <b>👨‍🎓 {{ a["aluno_nome"] }}</b><br>
-
-  {% if a["protocolo"] %}
-    <div class="tag ok">📄 {{ a["protocolo"] }}</div>
-  {% endif %}
-
-  {% if a["anexo_secretaria"] %}
-    <div class="tag ok">
-      <a href="{{ a["anexo_secretaria"] }}" target="_blank">📎 Secretaria</a>
+  <div class="process-header">
+    <div>
+      <div class="process-name">{{ a["aluno_nome"] }}</div>
+      <div class="process-id">{{ a["protocolo"] }}</div>
     </div>
-  {% endif %}
 
-  <div class="tag p2">
-    📌 {{ tipos.get(a["tipo"], "Desconhecido") }}
+    <div class="tag p2">
+      {{ tipos.get(a["tipo"], "Desconhecido") }}
+    </div>
   </div>
 
-  📅 Criado: {{ a["criado_em"] }}<br>
+  <div style="margin-top:10px;">
+    📅 {{ a["criado_em"] }}
+  </div>
 
+  <!-- STATUS -->
   {% if a["status"] == "PENDENTE" %}
-    <div class="tag p1">🟡 Pendente</div>
+    <div class="tag p1">Pendente</div>
   {% elif a["status"] == "EM_ATENDIMENTO" %}
-    <div class="tag p1">🟡 Em atendimento</div>
+    <div class="tag p1">Em atendimento</div>
   {% elif a["status"] == "AGUARDANDO_COORD" %}
-    <div class="tag p2">🟠 Na coordenação</div>
+    <div class="tag p2">Coordenação</div>
   {% elif a["status"] == "RETORNADO_SECRETARIA" %}
-    <div class="tag p2">🔁 Retornou para secretaria</div>
+    <div class="tag p2">Retorno</div>
   {% elif a["status"] == "FINALIZADO" %}
-    <div class="tag ok">🟢 Finalizado</div>
+    <div class="tag ok">Finalizado</div>
   {% endif %}
+
+  <!-- TIMELINE -->
+  <div class="timeline">
+    ✔ Criado<br>
+    {% if a["status"] != "PENDENTE" %}✔ Atendido<br>{% endif %}
+    {% if a["status"] in ["AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}✔ Coordenação<br>{% endif %}
+    {% if a["status"] == "FINALIZADO" %}✔ Finalizado{% endif %}
+  </div>
 
   <!-- PDF -->
   {% if a["status"] == "FINALIZADO" %}
-    <div style="margin-top:8px;">
-      <a href="/processo/{{ a['id'] }}/pdf" target="_blank" style="color:#2563eb; font-weight:bold;">
-        📄 Baixar Processo Completo
-      </a>
+    <div style="margin-top:10px;">
+      <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 Baixar</a>
     </div>
+  {% endif %}
+
+  <!-- DECISÃO -->
+  {% if a["decisao"] %}
+    {% if a["decisao"] == "DEFERIDO" %}
+      <div class="tag ok">Deferido</div>
+    {% else %}
+      <div class="tag no">Indeferido</div>
+    {% endif %}
   {% endif %}
 
   <!-- MENSAGEM -->
   {% if a["mensagem"] %}
-    <div class="tag p2">
-      💬 {{ a["mensagem"] }}
-    </div>
-  {% endif %}
-
-  <!-- TIMELINE -->
-  <div style="margin-top:10px; font-size:13px">
-
-    <div>📌 Criado</div>
-
-    {% if a["status"] in ["EM_ATENDIMENTO","AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
-      <div>🟡 Atendido</div>
-    {% endif %}
-
-    {% if a["status"] in ["AGUARDANDO_COORD","RETORNADO_SECRETARIA","FINALIZADO"] %}
-      <div>🟠 Enviado para coordenação</div>
-    {% endif %}
-
-    {% if a["status"] in ["RETORNADO_SECRETARIA","FINALIZADO"] %}
-      <div>🔁 Retornou da coordenação</div>
-    {% endif %}
-
-    {% if a["status"] == "FINALIZADO" %}
-      <div>🟢 Finalizado</div>
-    {% endif %}
-
-  </div>
-
-  <!-- RESULTADO -->
-  {% if a["decisao"] %}
-    {% if a["decisao"] == "DEFERIDO" %}
-      <div class="tag ok">🟢 Deferido</div>
-    {% else %}
-      <div class="tag no">🔴 Indeferido</div>
-    {% endif %}
+    <div class="tag p2">{{ a["mensagem"] }}</div>
   {% endif %}
 
   {% if a["parecer"] %}
-    <div class="tag p2">
-      📝 {{ a["parecer"] }}
-    </div>
-  {% endif %}
-
-  {% if a["anexo_url"] %}
-    <div class="tag ok">
-      <a href="{{ a["anexo_url"] }}" target="_blank">📎 Ver anexo</a>
-    </div>
-  {% endif %}
-
-  {% if session["role"] in ["admin","secretaria"] and a["status"] == "PENDENTE" %}
-    <form method="POST" action="/atender/{{ a["id"] }}">
-      <button>Atender</button>
-    </form>
+    <div class="tag p2">{{ a["parecer"] }}</div>
   {% endif %}
 
 </div>
 {% endfor %}
+
+</div>
 
 </div>
 
