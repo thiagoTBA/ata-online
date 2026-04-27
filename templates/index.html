@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Meus Requerimentos</title>
+<title>ATA Online</title>
 
 <style>
 * { box-sizing: border-box; }
@@ -14,86 +14,35 @@ body {
   color:#e5e7eb;
 }
 
-/* HEADER */
 .header {
-  padding:20px;
+  background:#020617;
   border-bottom:1px solid #1e293b;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+  padding:15px;
+  font-weight:bold;
 }
 
-.header h2 {
-  font-size:18px;
-}
-
-.logout {
-  color:#93c5fd;
-  text-decoration:none;
-}
-
-/* CONTAINER */
 .container {
   max-width:600px;
   margin:auto;
   padding:20px;
 }
 
-/* BOTÃO NOVO */
-.new-btn {
-  width:100%;
-  padding:16px;
-  border-radius:12px;
-  border:none;
-  background:#2563eb;
-  color:white;
-  font-weight:bold;
-  font-size:16px;
-  margin-bottom:20px;
-  cursor:pointer;
-}
-
-/* CARD */
 .card {
   background:#0f172a;
-  padding:15px;
-  border-radius:14px;
-  margin-bottom:12px;
+  padding:20px;
+  margin-bottom:15px;
+  border-radius:16px;
   border:1px solid #1e293b;
 }
 
-/* STATUS */
-.status {
-  font-size:12px;
-  padding:4px 10px;
-  border-radius:8px;
-  display:inline-block;
-  margin-top:5px;
+h3 {
+  margin:10px 0;
+  font-size:14px;
+  color:#94a3b8;
+  text-transform:uppercase;
 }
 
-.pendente { background:#facc15; color:black; }
-.andamento { background:#fb923c; color:black; }
-.finalizado { background:#22c55e; color:black; }
-
-/* MODAL */
-.modal {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.7);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-
-.modal-box {
-  background:#020617;
-  padding:20px;
-  border-radius:12px;
-  width:90%;
-  max-width:400px;
-}
-
-input, select, textarea {
+input, textarea, select {
   width:100%;
   padding:12px;
   margin-top:8px;
@@ -106,102 +55,290 @@ input, select, textarea {
 button {
   width:100%;
   padding:14px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
+  margin-top:15px;
   background:#2563eb;
   color:white;
+  border:none;
+  border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
 }
+
+.tag {
+  padding:5px 10px;
+  border-radius:8px;
+  font-size:12px;
+  display:inline-block;
+  margin-top:5px;
+}
+
+.error {
+  color:#ef4444;
+  font-size:12px;
+  margin-top:5px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #22c55e;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 9999;
+  animation: fadeIn .3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.p1 { background:#facc15; color:#000; }
+.p2 { background:#fb923c; color:#000; }
+.ok { background:#22c55e; color:#000; }
+.no { background:#ef4444; color:#fff; }
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <h2>📄 Meus Requerimentos</h2>
-  <a href="/logout" class="logout">Sair</a>
+  📄 ATA Online
+  <span style="float:right">
+    👤 {{ username }} |
+    <a href="/logout" style="color:#93c5fd;">Sair</a>
+  </span>
 </div>
 
 <div class="container">
 
-  <button class="new-btn" onclick="openModal()">
-    + Novo Requerimento
-  </button>
+<!-- FORM -->
+<div class="card">
+<form method="POST" action="/add" enctype="multipart/form-data">
 
-  <!-- LISTA -->
-  {% for a in atas %}
-  <div class="card">
+  <h3>Dados do aluno</h3>
 
-    <b>{{ a["aluno_nome"] }}</b><br>
-    <small>{{ a["protocolo"] }}</small>
+  <input name="aluno_nome" placeholder="Nome do aluno" required>
+  <input name="cpf" id="cpf" placeholder="CPF" required>
+  <input name="email" id="email" type="email" placeholder="Email" required>
+  <input name="telefone" id="telefone" placeholder="Telefone" required>
+  <input name="curso" placeholder="Curso">
+  <input name="rg" placeholder="RG">
 
-    <div>
-      📌 {{ tipos.get(a["tipo"], "Solicitação") }}
-    </div>
+  <h3>Acadêmico</h3>
 
-    <div>
-      📅 {{ a["criado_em"] }}
-    </div>
+  <select name="sexo">
+    <option value="">Sexo</option>
+    <option value="M">Masculino</option>
+    <option value="F">Feminino</option>
+  </select>
 
-    <!-- STATUS SIMPLES -->
-    {% if a["status"] == "PENDENTE" %}
-      <div class="status pendente">Pendente</div>
-    {% elif a["status"] in ["EM_ATENDIMENTO","AGUARDANDO_COORD"] %}
-      <div class="status andamento">Em andamento</div>
-    {% elif a["status"] == "FINALIZADO" %}
-      <div class="status finalizado">Finalizado</div>
-    {% endif %}
+  <select name="turno">
+    <option value="">Turno</option>
+    <option value="manha">Manhã</option>
+    <option value="tarde">Tarde</option>
+    <option value="noite">Noite</option>
+  </select>
 
-    {% if a["status"] == "FINALIZADO" %}
-      <div style="margin-top:8px;">
-        <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 Baixar resultado</a>
-      </div>
-    {% endif %}
+  <h3>Solicitação</h3>
 
+  <input name="projeto" placeholder="Projeto">
+
+  <select name="tipo" required>
+    <option value="">Tipo de solicitação</option>
+    {% for k, v in tipos.items() %}
+      <option value="{{ k }}">{{ v }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png">
+
+  <textarea name="justificativa" placeholder="Justificativa"></textarea>
+
+  <button>Criar Requerimento</button>
+
+</form>
+</div>
+
+<!-- LISTA -->
+{% for a in atas %}
+<div class="card">
+
+  <b>{{ a["aluno_nome"] }}</b><br>
+
+  {% if a["protocolo"] %}
+    <div class="tag ok">{{ a["protocolo"] }}</div>
+  {% endif %}
+
+  <div class="tag p2">
+    {{ tipos.get(a["tipo"], "Desconhecido") }}
   </div>
-  {% endfor %}
+
+  <div>📅 {{ a["criado_em"] }}</div>
+
+  {% if a["status"] == "PENDENTE" %}
+    <div class="tag p1">Pendente</div>
+  {% elif a["status"] == "EM_ATENDIMENTO" %}
+    <div class="tag p1">Em atendimento</div>
+  {% elif a["status"] == "AGUARDANDO_COORD" %}
+    <div class="tag p2">Coordenação</div>
+  {% elif a["status"] == "FINALIZADO" %}
+    <div class="tag ok">Finalizado</div>
+  {% endif %}
+
+  {% if a["status"] == "FINALIZADO" %}
+    <a href="/processo/{{ a['id'] }}/pdf" target="_blank">📄 Baixar</a>
+  {% endif %}
+
+</div>
+{% endfor %}
 
 </div>
 
-<!-- MODAL -->
-<div class="modal" id="modal">
-  <div class="modal-box">
-
-    <h3>Novo requerimento</h3>
-
-    <form method="POST" action="/add" enctype="multipart/form-data">
-
-      <input name="aluno_nome" placeholder="Nome" required>
-      <input name="cpf" placeholder="CPF" required>
-      <input name="email" placeholder="Email">
-      <input name="telefone" placeholder="Telefone">
-
-      <select name="tipo" required>
-        {% for k, v in tipos.items() %}
-          <option value="{{ k }}">{{ v }}</option>
-        {% endfor %}
-      </select>
-
-      <input type="file" name="anexo">
-      <textarea name="justificativa" placeholder="Descreva seu pedido"></textarea>
-
-      <button>Criar</button>
-
-    </form>
-
-  </div>
-</div>
-
+<!-- SCRIPT -->
 <script>
-function openModal() {
-  document.getElementById("modal").style.display = "flex";
+// ================= UTIL =================
+function setError(input, msg) {
+  let el = input.nextElementSibling;
+  if (!el || !el.classList.contains("error")) {
+    el = document.createElement("div");
+    el.className = "error";
+    input.after(el);
+  }
+  el.innerText = msg;
+  input.style.border = "1px solid #ef4444";
 }
 
-window.onclick = function(e) {
-  let modal = document.getElementById("modal");
-  if (e.target == modal) modal.style.display = "none";
+function clearError(input) {
+  let el = input.nextElementSibling;
+  if (el && el.classList.contains("error")) {
+    el.remove();
+  }
+  input.style.border = "1px solid #22c55e";
 }
+
+// ================= CPF =================
+function validarCPF(cpf) {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+  let soma = 0;
+  for (let i = 0; i < 9; i++)
+    soma += parseInt(cpf[i]) * (10 - i);
+
+  let resto = (soma * 10) % 11;
+  if (resto === 10) resto = 0;
+  if (resto !== parseInt(cpf[9])) return false;
+
+  soma = 0;
+  for (let i = 0; i < 10; i++)
+    soma += parseInt(cpf[i]) * (11 - i);
+
+  resto = (soma * 10) % 11;
+  if (resto === 10) resto = 0;
+
+  return resto === parseInt(cpf[10]);
+}
+
+// ================= INPUTS =================
+const cpf = document.getElementById("cpf");
+const email = document.getElementById("email");
+const tel = document.getElementById("telefone");
+
+// CPF máscara + validação
+cpf.addEventListener("input", () => {
+  let v = cpf.value.replace(/\D/g, "").slice(0,11);
+  v = v.replace(/(\d{3})(\d)/, "$1.$2");
+  v = v.replace(/(\d{3})(\d)/, "$1.$2");
+  v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  cpf.value = v;
+
+  if (v.length === 14) {
+    validarCPF(v) ? clearError(cpf) : setError(cpf, "CPF inválido");
+  }
+});
+
+// EMAIL
+email.addEventListener("input", () => {
+  let valido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
+  valido ? clearError(email) : setError(email, "Email inválido");
+});
+
+// TELEFONE
+tel.addEventListener("input", () => {
+  let v = tel.value.replace(/\D/g, "").slice(0,11);
+
+  if (v.length > 10) {
+    v = v.replace(/(\d{2})(\d)/, "($1) $2");
+    v = v.replace(/(\d{5})(\d)/, "$1-$2");
+  } else {
+    v = v.replace(/(\d{2})(\d)/, "($1) $2");
+    v = v.replace(/(\d{4})(\d)/, "$1-$2");
+  }
+
+  tel.value = v;
+
+  if (v.length < 14) {
+    setError(tel, "Telefone incompleto");
+  } else {
+    clearError(tel);
+  }
+});
+
+// ================= SUBMIT =================
+document.querySelector("form").addEventListener("submit", function(e) {
+  let erros = [];
+
+  if (!validarCPF(cpf.value)) {
+    setError(cpf, "CPF inválido");
+    erros.push(cpf);
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+    setError(email, "Email inválido");
+    erros.push(email);
+  }
+
+  if (tel.value.length < 14) {
+    setError(tel, "Telefone inválido");
+    erros.push(tel);
+  }
+
+  if (erros.length > 0) {
+    e.preventDefault();
+
+    erros[0].scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.innerText = msg;
+
+  document.body.appendChild(t);
+
+  setTimeout(() => {
+    t.remove();
+  }, 3000);
+}
+
+// ===== FORM =====
+const form = document.querySelector("form");
+const btn = form.querySelector("button");
+
+form.addEventListener("submit", function() {
+  // loading
+  btn.disabled = true;
+  btn.innerText = "Enviando...";
+});
 </script>
 
 </body>
